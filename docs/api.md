@@ -58,3 +58,50 @@ Response `200 OK` when every check passes, `503 Service Unavailable` when any ch
 - `status`: `"ok"` or `"error"` (`"error"` if any check is not `"ok"`).
 - `checks.<name>`: `"ok"` or `"error"`. No exception details or connection strings in the body (they go to the server log).
 - `version`: application version string from settings.
+
+### `GET /api/v1/cities/` (foundation, #5)
+List of supported cities. No auth, **not paginated** (plain JSON array), ordered by `id`.
+`name` is returned in the request language (`Accept-Language`, default `pl`).
+
+Response `200 OK`:
+```json
+[
+  {
+    "id": "krakow",
+    "name": "Kraków",
+    "map": { "center": { "lat": 50.0614, "lon": 19.9383 }, "zoom": 12 }
+  },
+  {
+    "id": "warszawa",
+    "name": "Warszawa",
+    "map": { "center": { "lat": 52.2297, "lon": 21.0122 }, "zoom": 11 }
+  }
+]
+```
+With `Accept-Language: en` the names are `"Cracow"` / `"Warsaw"` (values come from city config, not code).
+
+### `GET /api/v1/cities/{city}/` (foundation, #5)
+One city with everything the UI needs to render it. No auth. Same `id`, `name`, `map` as in the list, plus:
+
+Response `200 OK`:
+```json
+{
+  "id": "krakow",
+  "name": "Kraków",
+  "timezone": "Europe/Warsaw",
+  "map": { "center": { "lat": 50.0614, "lon": 19.9383 }, "zoom": 12 },
+  "vehicle_types": ["tram", "bus", "rail"],
+  "line_groups": [
+    { "id": "day", "name": "Day lines", "colour": "#1f6feb" },
+    { "id": "night", "name": "Night lines", "colour": "#3d2b7a" }
+  ],
+  "realtime": { "departures": true, "vehicles": true }
+}
+```
+- `vehicle_types`: subset of `tram`, `bus`, `metro`, `rail`, in display order (Kraków has no `metro`).
+- `line_groups`: in display order; `name` translated (pl/en from config); `colour` is a `#rrggbb` hex string.
+- `realtime`: which live data the city's sources provide. `false` means the UI must not offer that view.
+- Feed URLs, ticket zones and data source attributions stay in the internal city config and are **not** exposed here
+  (ticket zones come with tickets #14, attributions with `GET /data-sources/` #25).
+
+Errors: unknown `{city}` → `404` with `{ "error": { "code": "not_found", "message": "…" } }` (message translated).
