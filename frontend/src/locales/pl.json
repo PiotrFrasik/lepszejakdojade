@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "lepszejakdojade",
+    "tagline": "Komunikacja miejska w Krakowie i Warszawie",
+    "homeLink": "lepszejakdojade – strona główna",
+    "skipToContent": "Przejdź do treści"
+  },
+  "nav": {
+    "label": "Menu główne",
+    "home": "Mapa",
+    "journey": "Wyszukaj połączenie",
+    "timetable": "Rozkłady jazdy",
+    "tickets": "Bilety",
+    "assistant": "Asystent",
+    "dataSources": "Źródła danych"
+  },
+  "city": {
+    "label": "Miasto",
+    "pickerTitle": "Wybierz miasto",
+    "pickerDescription": "Wybierz miasto, w którym chcesz podróżować. Możesz je zmienić w każdej chwili w nagłówku strony.",
+    "pickerOptionsLabel": "Dostępne miasta"
+  },
+  "language": {
+    "label": "Język",
+    "names": {
+      "pl": "Polski",
+      "en": "English"
+    }
+  },
+  "map": {
+    "label": "Mapa miasta {city}",
+    "osmContributors": "współtwórcy OpenStreetMap",
+    "controls": {
+      "title": "Mapa",
+      "zoomIn": "Przybliż",
+      "zoomOut": "Oddal",
+      "resetBearing": "Przeciągnij, aby obrócić mapę; kliknij, aby ustawić północ",
+      "toggleAttribution": "Pokaż lub ukryj informacje o źródłach mapy",
+      "mapFeedback": "Zgłoś uwagi do mapy",
+      "findMyLocation": "Pokaż moją lokalizację",
+      "locationNotAvailable": "Lokalizacja niedostępna",
+      "popupClose": "Zamknij okienko",
+      "cooperativeWindows": "Użyj Ctrl + przewijania, aby przybliżyć mapę",
+      "cooperativeMac": "Użyj ⌘ + przewijania, aby przybliżyć mapę",
+      "cooperativeMobile": "Użyj dwóch palców, aby przesunąć mapę"
+    }
+  },
+  "footer": {
+    "demoNotice": "Projekt demonstracyjny. Dane mogą być niepełne lub nieaktualne.",
+    "dataSources": "Źródła danych i licencje"
+  },
+  "status": {
+    "label": "Status serwera",
+    "checking": "Sprawdzanie połączenia…",
+    "ok": "Serwer działa",
+    "degraded": "Serwer działa z problemami",
+    "unavailable": "Serwer niedostępny"
+  },
+  "placeholder": {
+    "comingSoon": "Ta sekcja jest w przygotowaniu."
+  },
+  "notFound": {
+    "title": "Nie znaleziono strony",
+    "message": "Strona, której szukasz, nie istnieje lub została przeniesiona.",
+    "backHome": "Wróć na stronę główną"
+  }
+}

@@ -9,6 +9,8 @@ The generated OpenAPI schema (drf-spectacular, `/api/schema/`, Swagger UI at `/a
 - JSON, `snake_case` fields. Times in ISO 8601 with offset (`Europe/Warsaw`), durations in seconds, distances in metres.
 - Pagination: `?page=`, response `{ "count", "next", "previous", "results" }`.
 - Errors: `{ "error": { "code": "not_found", "message": "…" } }` with the matching HTTP status.
+  Validation errors (`400`, code `validation_error`) may add an optional `details` object mapping field names
+  to lists of messages, e.g. `{ "details": { "email": ["Enter a valid e-mail address."] } }`. Clients must not rely on it being present.
 - Auth: endpoints marked 🔒 require a logged-in user.
 - Language: clients send `Accept-Language: pl` or `en` (default `pl`). Translatable fields (ticket names, descriptions, error messages) come back in that language. Proper names (stops, streets) are never translated.
 - Realtime fields are nullable; `null` means no live data, never a guess.
@@ -35,3 +37,24 @@ The generated OpenAPI schema (drf-spectacular, `/api/schema/`, Swagger UI at `/a
 | History 🔒 | `GET/DELETE /my/history/` |
 | Chat | `POST /assistant/chat/` (body includes `language`: `pl` or `en`) |
 | Data sources | `GET /data-sources/` |
+| Health | `GET /health/` |
+
+## Endpoint details
+
+### `GET /api/v1/health/` (foundation, #2)
+Liveness and dependency check used by docker compose and CI. No auth, not paginated, not translated.
+
+Response `200 OK` when every check passes, `503 Service Unavailable` when any check fails (same body shape):
+```json
+{
+  "status": "ok",
+  "checks": {
+    "database": "ok",
+    "redis": "ok"
+  },
+  "version": "0.1.0"
+}
+```
+- `status`: `"ok"` or `"error"` (`"error"` if any check is not `"ok"`).
+- `checks.<name>`: `"ok"` or `"error"`. No exception details or connection strings in the body (they go to the server log).
+- `version`: application version string from settings.
