@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "lepszejakdojade",
+    "tagline": "Public transport in Kraków and Warsaw",
+    "homeLink": "lepszejakdojade – home",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "label": "Main menu",
+    "home": "Map",
+    "journey": "Journey planner",
+    "timetable": "Timetables",
+    "tickets": "Tickets",
+    "assistant": "Assistant",
+    "dataSources": "Data sources"
+  },
+  "city": {
+    "label": "City",
+    "pickerTitle": "Choose your city",
+    "pickerDescription": "Choose the city you want to travel in. You can change it at any time in the page header.",
+    "pickerOptionsLabel": "Available cities"
+  },
+  "language": {
+    "label": "Language",
+    "names": {
+      "pl": "Polski",
+      "en": "English"
+    }
+  },
+  "map": {
+    "label": "Map of {city}",
+    "osmContributors": "OpenStreetMap contributors",
+    "controls": {
+      "title": "Map",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetBearing": "Drag to rotate map, click to reset north",
+      "toggleAttribution": "Toggle map attribution",
+      "mapFeedback": "Map feedback",
+      "findMyLocation": "Find my location",
+      "locationNotAvailable": "Location not available",
+      "popupClose": "Close popup",
+      "cooperativeWindows": "Use Ctrl + scroll to zoom the map",
+      "cooperativeMac": "Use ⌘ + scroll to zoom the map",
+      "cooperativeMobile": "Use two fingers to move the map"
+    }
+  },
+  "footer": {
+    "demoNotice": "Demo project. Data may be incomplete or out of date.",
+    "dataSources": "Data sources and licences"
+  },
+  "status": {
+    "label": "Server status",
+    "checking": "Checking connection…",
+    "ok": "Server is up",
+    "degraded": "Server is up with problems",
+    "unavailable": "Server unavailable"
+  },
+  "placeholder": {
+    "comingSoon": "This section is coming soon."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to the home page"
+  }
+}
