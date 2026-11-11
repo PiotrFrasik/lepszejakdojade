@@ -67,6 +67,21 @@ docker compose exec backend pytest -q     # backend (pytest)
 cd frontend && npm run test               # frontend (Vitest), needs Node 22 on the host
 ```
 
+## Continuous integration
+
+GitHub Actions runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml) on every push to `main`
+and on every pull request. Both jobs run on `ubuntu-24.04`.
+
+- **Backend** (Python 3.12, PostGIS 16 and Redis 7 as service containers):
+  `ruff check .`, `ruff format --check .`, `python manage.py makemigrations --check --dry-run`,
+  `pytest`. The JUnit report is uploaded as the `backend-test-report` artifact.
+- **Frontend** (Node 22): `npm ci`, `npm run lint`, `npm run type-check`, `npm test` (Vitest,
+  including the pl/en locale key parity test), `npm run build`.
+
+To run the same checks locally, use the same commands from `backend/` and `frontend/`. The
+`env:` block in `ci.yml` lists the variables the backend job sets. The CI values are dummy values,
+not secrets.
+
 ## Windows notes
 
 - `make` is usually not installed on Windows. The Makefile targets are thin wrappers over
