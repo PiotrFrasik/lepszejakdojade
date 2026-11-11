@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     # Local
     "core",
+    "cities",
 ]
 
 MIDDLEWARE = [
@@ -122,6 +123,9 @@ CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# City configuration: one YAML file per city (see cities/registry.py)
+CITY_CONFIG_DIR = Path(env_str("CITY_CONFIG_DIR") or BASE_DIR / "cities" / "config")
 
 # External services
 OTP_URL = env_str("OTP_URL", "http://localhost:8080")
