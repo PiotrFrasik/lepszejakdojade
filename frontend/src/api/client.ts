@@ -1,5 +1,5 @@
 import { getCurrentLocale } from '@/i18n'
-import type { ApiErrorBody, HealthResponse } from '@/types/api'
+import type { ApiErrorBody, City, CityDetail, CityId, HealthResponse } from '@/types/api'
 
 export const API_BASE = '/api/v1'
 
@@ -116,4 +116,14 @@ export function apiGet<T>(
 /** `GET /api/v1/health/`. A 503 still carries a valid body, so it is returned, not thrown. */
 export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
   return apiGet<HealthResponse>('/health/', { signal, acceptStatuses: [503] })
+}
+
+/** `GET /api/v1/cities/`: all cities, names in the current UI language. */
+export function getCities(signal?: AbortSignal): Promise<City[]> {
+  return apiGet<City[]>('/cities/', { signal })
+}
+
+/** `GET /api/v1/cities/{city}/`: city settings. Unknown city → `ApiError` with status 404. */
+export function getCity(id: CityId, signal?: AbortSignal): Promise<CityDetail> {
+  return apiGet<CityDetail>(`/cities/${encodeURIComponent(id)}/`, { signal })
 }

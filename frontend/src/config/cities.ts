@@ -1,28 +1,20 @@
 /**
- * Temporary local city configuration.
- *
- * TODO(#5): replace with data from `GET /api/v1/cities/`. Keep the `CityConfig` shape close to
- * what the API returns so the switch is a data-source change only.
+ * City helpers. The list of cities and their settings (names, map view, vehicle types, line
+ * groups, realtime availability) come from `GET /api/v1/cities/`; nothing city-specific is
+ * hard-coded in the frontend.
  */
 
-export type CityId = 'krakow' | 'warszawa'
+import type { City, CityId, LatLon } from '@/types/api'
 
-export interface CityConfig {
-  /** Slug used in API paths: `/api/v1/cities/{id}/…`. */
-  id: CityId
-  /** Proper name, never translated. */
-  name: string
-  /** Map centre as `[longitude, latitude]`. */
-  center: [number, number]
-  /** Initial map zoom level. */
-  zoom: number
+export type { City, CityDetail, CityId, CityMapConfig, LatLon } from '@/types/api'
+
+/** Converts an API point to MapLibre's `[longitude, latitude]` order. */
+export function toLngLat(point: LatLon): [number, number] {
+  return [point.lon, point.lat]
 }
 
-export const CITIES: readonly CityConfig[] = [
-  { id: 'krakow', name: 'Kraków', center: [19.9383, 50.0614], zoom: 12 },
-  { id: 'warszawa', name: 'Warszawa', center: [21.0122, 52.2297], zoom: 11 },
-]
-
-export function findCity(id: string | null | undefined): CityConfig | undefined {
-  return CITIES.find((city) => city.id === id)
+/** Finds a city by id in a list loaded from the API. */
+export function findCity(cities: readonly City[], id: CityId | null | undefined): City | undefined {
+  if (!id) return undefined
+  return cities.find((city) => city.id === id)
 }

@@ -4,12 +4,17 @@ import { Map as MapLibreMap, NavigationControl, type MapOptions } from 'maplibre
 import { onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import type { CityConfig } from '@/config/cities'
+import { toLngLat, type City } from '@/config/cities'
 import { MAP_MAX_ZOOM, OSM_COPYRIGHT_URL, buildBaseStyle } from '@/config/map'
 
 const props = defineProps<{
-  city: CityConfig
+  city: City
 }>()
+
+/** Initial camera of the city from the API (MapLibre wants `[lon, lat]`). */
+function cityCamera(): { center: [number, number]; zoom: number } {
+  return { center: toLngLat(props.city.map.center), zoom: props.city.map.zoom }
+}
 
 const { t, locale } = useI18n()
 const container = useTemplateRef<HTMLDivElement>('container')
@@ -65,7 +70,7 @@ function createMap(): void {
         bearing: previous.getBearing(),
         pitch: previous.getPitch(),
       }
-    : { center: props.city.center, zoom: props.city.zoom }
+    : cityCamera()
   previous?.remove()
 
   const instance = new MapLibreMap({
@@ -91,7 +96,7 @@ watch(
   () => {
     const instance = map.value
     if (!instance) return
-    const target = { center: props.city.center, zoom: props.city.zoom, bearing: 0, pitch: 0 }
+    const target = { ...cityCamera(), bearing: 0, pitch: 0 }
     if (prefersReducedMotion()) instance.jumpTo(target)
     else instance.flyTo({ ...target, essential: false })
   },

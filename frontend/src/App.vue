@@ -11,6 +11,7 @@ import { useCityStore } from '@/stores/city'
 const { t } = useI18n()
 const route = useRoute()
 const cityStore = useCityStore()
+cityStore.init()
 
 // Keep the document title in sync with the route and the UI language.
 watchEffect(() => {
@@ -21,7 +22,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div class="app-shell" :inert="!cityStore.hasCity || undefined">
+  <div class="app-shell" :inert="cityStore.needsPicker || undefined">
     <a class="skip-link" href="#main-content">{{ t('app.skipToContent') }}</a>
     <AppHeader />
     <main id="main-content" class="app-main" tabindex="-1">
@@ -29,7 +30,7 @@ watchEffect(() => {
     </main>
     <AppFooter />
   </div>
-  <CityPicker v-if="!cityStore.hasCity" />
+  <CityPicker v-if="cityStore.needsPicker" />
 </template>
 
 <style scoped>
