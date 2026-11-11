@@ -66,7 +66,13 @@ def test_detail_shape(client, city, lang):
     assert resp.status_code == 200
     body = resp.json()
     assert set(body) == {
-        "id", "name", "timezone", "map", "vehicle_types", "line_groups", "realtime",
+        "id",
+        "name",
+        "timezone",
+        "map",
+        "vehicle_types",
+        "line_groups",
+        "realtime",
     }
     assert body["id"] == city
     assert body["name"] == NAMES[city][lang]
@@ -117,8 +123,7 @@ def test_no_internal_data_leaked(client):
 
 @pytest.mark.parametrize(
     "lang,message",
-    [(None, "Nie znaleziono miasta."), ("pl", "Nie znaleziono miasta."),
-     ("en", "City not found.")],
+    [(None, "Nie znaleziono miasta."), ("pl", "Nie znaleziono miasta."), ("en", "City not found.")],
 )
 def test_unknown_city_404(client, lang, message):
     resp = get(client, f"{LIST_URL}atlantis/", lang)

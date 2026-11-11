@@ -132,9 +132,11 @@ def test_error_names_file_and_field(config_dir):
 
 def test_languages_setting_drives_required_names(config_dir):
     write(config_dir, valid_data())
-    with override_settings(LANGUAGES=[("pl", "Polski"), ("en", "English"), ("de", "Deutsch")]):
-        with pytest.raises(CityConfigError):
-            all_cities()
+    with (
+        override_settings(LANGUAGES=[("pl", "Polski"), ("en", "English"), ("de", "Deutsch")]),
+        pytest.raises(CityConfigError),
+    ):
+        all_cities()
 
 
 def test_malformed_yaml(config_dir):
@@ -150,9 +152,11 @@ def test_yaml_not_a_mapping(config_dir):
 
 
 def test_missing_directory(tmp_path):
-    with override_settings(CITY_CONFIG_DIR=tmp_path / "does-not-exist"):
-        with pytest.raises(CityConfigError, match="does not exist"):
-            all_cities()
+    with (
+        override_settings(CITY_CONFIG_DIR=tmp_path / "does-not-exist"),
+        pytest.raises(CityConfigError, match="does not exist"),
+    ):
+        all_cities()
     registry.clear_cache()
 
 
