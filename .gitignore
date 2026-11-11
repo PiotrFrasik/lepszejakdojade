@@ -1,0 +1,54 @@
+# Environment
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Tests and coverage
+.coverage
+coverage/
+htmlcov/
+coverage.xml
+junit.xml
+playwright-report/
+test-results/
+
+# OTP graphs and downloaded data
+otp/**/graph.obj
+otp/**/streetGraph.obj
+otp/data/*.pbf
+otp/data/*.zip
+
+# Django
+backend/staticfiles/
+backend/media/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local notes
+JAK-UZYWAC.md
+
+# Logs and local env overrides
+*.log
+.env.*.local
+
+# Celery beat
+celerybeat-schedule*
+celerybeat.pid
