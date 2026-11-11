@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "lepszejakdojade",
-    "tagline": "Komunikacja miejska w Krakowie i Warszawie",
+    "tagline": "Komunikacja miejska: połączenia, rozkłady jazdy i bilety",
     "homeLink": "lepszejakdojade – strona główna",
     "skipToContent": "Przejdź do treści"
   },
@@ -18,7 +18,12 @@
     "label": "Miasto",
     "pickerTitle": "Wybierz miasto",
     "pickerDescription": "Wybierz miasto, w którym chcesz podróżować. Możesz je zmienić w każdej chwili w nagłówku strony.",
-    "pickerOptionsLabel": "Dostępne miasta"
+    "pickerOptionsLabel": "Dostępne miasta",
+    "loading": "Wczytywanie miast…",
+    "loadError": "Nie udało się wczytać listy miast. Sprawdź połączenie i spróbuj ponownie.",
+    "empty": "Obecnie nie ma dostępnych miast.",
+    "retry": "Spróbuj ponownie",
+    "retrying": "Ponawianie…"
   },
   "language": {
     "label": "Język",

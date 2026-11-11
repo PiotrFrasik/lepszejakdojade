@@ -2,7 +2,6 @@
 import { computed, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { findCity } from '@/config/cities'
 import { useCityStore } from '@/stores/city'
 
 const { t } = useI18n()
@@ -10,19 +9,27 @@ const cityStore = useCityStore()
 const selectId = useId()
 
 const selected = computed({
-  get: () => cityStore.cityId ?? '',
-  set: (value: string) => {
-    const city = findCity(value)
-    if (city) cityStore.setCity(city.id)
-  },
+  get: () => (cityStore.hasCity ? (cityStore.cityId ?? '') : ''),
+  set: (value: string) => cityStore.setCity(value),
 })
+
+const placeholder = computed(() =>
+  cityStore.cities.length === 0 && cityStore.listStatus === 'loading'
+    ? t('city.loading')
+    : t('city.label'),
+)
 </script>
 
 <template>
   <div class="city-switcher">
     <label :for="selectId" class="visually-hidden">{{ t('city.label') }}</label>
-    <select :id="selectId" v-model="selected" class="city-switcher__select">
-      <option v-if="!cityStore.hasCity" value="" disabled>{{ t('city.label') }}</option>
+    <select
+      :id="selectId"
+      v-model="selected"
+      class="city-switcher__select"
+      :disabled="cityStore.cities.length === 0"
+    >
+      <option v-if="!cityStore.hasCity" value="" disabled>{{ placeholder }}</option>
       <option v-for="city in cityStore.cities" :key="city.id" :value="city.id">
         {{ city.name }}
       </option>
@@ -51,6 +58,11 @@ const selected = computed({
   font-weight: 600;
   appearance: none;
   cursor: pointer;
+}
+
+.city-switcher__select:disabled {
+  opacity: 0.7;
+  cursor: progress;
 }
 
 .city-switcher__select option {
