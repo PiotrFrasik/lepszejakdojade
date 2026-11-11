@@ -13,3 +13,14 @@ class HealthSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=HEALTH_STATUS_CHOICES)
     checks = HealthChecksSerializer()
     version = serializers.CharField()
+
+
+class ErrorDetailSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    message = serializers.CharField()
+
+
+class ErrorSerializer(serializers.Serializer):
+    """Contract error body: {"error": {"code": ..., "message": ...}}."""
+
+    error = ErrorDetailSerializer()

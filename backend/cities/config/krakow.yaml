@@ -1,0 +1,85 @@
+# City configuration: Kraków.
+# Schema and validation: backend/cities/registry.py. The file name must equal `id`.
+# Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
+# Internal only (never returned by the API): feeds, ticket_zones, attributions.
+# Values marked UNVERIFIED must be checked against the publisher before production use.
+
+id: krakow
+names:
+  pl: Kraków
+  en: Cracow
+timezone: Europe/Warsaw
+
+map:
+  center:
+    lat: 50.0614
+    lon: 19.9383
+  zoom: 12
+
+# Display order.
+vehicle_types: [tram, bus, rail]
+
+# Display order.
+line_groups:
+  - id: day
+    names: { pl: Linie dzienne, en: Day lines }
+    colour: "#1f6feb"
+  - id: night
+    names: { pl: Linie nocne, en: Night lines }
+    colour: "#3d2b7a"
+  - id: agglomeration
+    names: { pl: Linie aglomeracyjne, en: Agglomeration lines }
+    colour: "#2da44e"
+  - id: replacement
+    names: { pl: Linie zastępcze i okresowe, en: Replacement and temporary lines }
+    colour: "#d4a72c"
+
+realtime:
+  departures: true
+  vehicles: true
+
+feeds:
+  # ZTP Kraków publishes separate feeds for trams (T) and buses (A).
+  gtfs_static:
+    - id: ztp_tram
+      url: https://gtfs.ztp.krakow.pl/GTFS_KRK_T.zip
+    - id: ztp_bus
+      url: https://gtfs.ztp.krakow.pl/GTFS_KRK_A.zip
+    # UNVERIFIED: regional rail (Koleje Małopolskie / PKP) feed not chosen yet.
+    - id: rail
+      url: null
+  gtfs_rt:
+    - id: ztp_tram_vehicle_positions
+      entity: vehicle_positions
+      url: https://gtfs.ztp.krakow.pl/VehiclePositions_T.pb
+    - id: ztp_tram_trip_updates
+      entity: trip_updates
+      url: https://gtfs.ztp.krakow.pl/TripUpdates_T.pb
+    - id: ztp_tram_service_alerts
+      entity: service_alerts
+      url: https://gtfs.ztp.krakow.pl/ServiceAlerts_T.pb
+    - id: ztp_bus_vehicle_positions
+      entity: vehicle_positions
+      url: https://gtfs.ztp.krakow.pl/VehiclePositions_A.pb
+    - id: ztp_bus_trip_updates
+      entity: trip_updates
+      url: https://gtfs.ztp.krakow.pl/TripUpdates_A.pb
+    - id: ztp_bus_service_alerts
+      entity: service_alerts
+      url: https://gtfs.ztp.krakow.pl/ServiceAlerts_A.pb
+  other: []
+
+# PLACEHOLDER: real zone boundaries come with the ticket catalogue (#14).
+ticket_zones:
+  - id: "1"
+    names: { pl: Strefa I, en: Zone I }
+  - id: "2"
+    names: { pl: Strefa II, en: Zone II }
+  - id: "3"
+    names: { pl: Strefa III, en: Zone III }
+
+attributions:
+  - name: Zarząd Transportu Publicznego w Krakowie
+    url: https://gtfs.ztp.krakow.pl/
+    # UNVERIFIED: licence of the ZTP open data feeds.
+    licence: null

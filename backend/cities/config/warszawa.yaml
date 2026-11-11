@@ -1,0 +1,83 @@
+# City configuration: Warsaw.
+# Schema and validation: backend/cities/registry.py. The file name must equal `id`.
+# Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
+# Internal only (never returned by the API): feeds, ticket_zones, attributions.
+# Values marked UNVERIFIED must be checked against the publisher before production use.
+
+id: warszawa
+names:
+  pl: Warszawa
+  en: Warsaw
+timezone: Europe/Warsaw
+
+map:
+  center:
+    lat: 52.2297
+    lon: 21.0122
+  zoom: 11
+
+# Display order.
+vehicle_types: [metro, tram, bus, rail]
+
+# Display order.
+line_groups:
+  - id: day
+    names: { pl: Linie dzienne, en: Day lines }
+    colour: "#1f6feb"
+  - id: express
+    names: { pl: Linie przyspieszone i ekspresowe, en: Fast and express lines }
+    colour: "#cf222e"
+  - id: night
+    names: { pl: Linie nocne, en: Night lines }
+    colour: "#3d2b7a"
+  - id: suburban
+    names: { pl: Linie strefowe, en: Suburban zone lines }
+    colour: "#2da44e"
+  - id: replacement
+    names: { pl: Linie zastępcze i okresowe, en: Replacement and temporary lines }
+    colour: "#d4a72c"
+
+# Warsaw publishes live vehicle positions but no live departures.
+realtime:
+  departures: false
+  vehicles: true
+
+feeds:
+  gtfs_static:
+    # UNVERIFIED: community GTFS built from ZTM Warszawa data (mkuran.pl).
+    - id: ztm
+      url: https://mkuran.pl/gtfs/warsaw.zip
+    # UNVERIFIED: WKD (Warszawska Kolej Dojazdowa) feed.
+    - id: wkd
+      url: https://mkuran.pl/gtfs/wkd.zip
+    # UNVERIFIED: national rail feed not chosen yet.
+    - id: rail
+      url: null
+  gtfs_rt: []
+  other:
+    # UNVERIFIED: vehicle positions from the City of Warsaw open data API (needs an API key
+    # passed via environment, never stored here). Not GTFS-RT.
+    - id: um_vehicle_positions
+      kind: um_warszawa_api
+      url: https://api.um.warszawa.pl/api/action/busestrams_get/
+
+# PLACEHOLDER: real zone boundaries come with the ticket catalogue (#14).
+ticket_zones:
+  - id: "1"
+    names: { pl: Strefa 1, en: Zone 1 }
+  - id: "2"
+    names: { pl: Strefa 2, en: Zone 2 }
+
+attributions:
+  - name: Zarząd Transportu Miejskiego w Warszawie
+    url: https://www.ztm.waw.pl/
+    # UNVERIFIED: licence.
+    licence: null
+  - name: Miasto Stołeczne Warszawa – otwarte dane
+    url: https://api.um.warszawa.pl/
+    # UNVERIFIED: licence.
+    licence: null
+  - name: Mikołaj Kuranowski – Warsaw GTFS
+    url: https://mkuran.pl/gtfs/
+    # UNVERIFIED: licence.
+    licence: null
