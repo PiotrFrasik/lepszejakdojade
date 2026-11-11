@@ -10,6 +10,7 @@ The generated OpenAPI schema (drf-spectacular, `/api/schema/`, Swagger UI at `/a
 - Pagination: `?page=`, response `{ "count", "next", "previous", "results" }`.
 - Errors: `{ "error": { "code": "not_found", "message": "…" } }` with the matching HTTP status.
 - Auth: endpoints marked 🔒 require a logged-in user.
+- Language: clients send `Accept-Language: pl` or `en` (default `pl`). Translatable fields (ticket names, descriptions, error messages) come back in that language. Proper names (stops, streets) are never translated.
 - Realtime fields are nullable; `null` means no live data, never a guess.
 
 ## Planned endpoints (details are added per feature)
@@ -29,8 +30,8 @@ The generated OpenAPI schema (drf-spectacular, `/api/schema/`, Swagger UI at `/a
 | Delay stats | `GET /cities/{city}/lines/{line_id}/delay-stats/?stop_id=` |
 | Tickets | `GET /cities/{city}/tickets/`, `POST /cities/{city}/tickets/suggest/` |
 | Demo purchase 🔒 | `POST /orders/`, `GET /orders/{id}/`, `GET /my/tickets/` |
-| Account | `POST /auth/register/`, `POST /auth/login/`, `POST /auth/logout/`, `GET /auth/me/` |
+| Account | `POST /auth/register/`, `POST /auth/login/`, `POST /auth/logout/`, `GET /auth/me/`, `PATCH /auth/me/` (incl. `language`) |
 | Favourites 🔒 | `GET/POST/DELETE /my/favourites/` |
 | History 🔒 | `GET/DELETE /my/history/` |
-| Chat | `POST /assistant/chat/` |
+| Chat | `POST /assistant/chat/` (body includes `language`: `pl` or `en`) |
 | Data sources | `GET /data-sources/` |

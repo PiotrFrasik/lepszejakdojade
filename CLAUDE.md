@@ -7,8 +7,9 @@ Full product description: `docs/concept.md`. Read it before planning any work.
 ## Language rules (strict)
 - **Everything in the repository is in English**: code, identifiers, comments, docstrings,
   commit messages, branch names, PR titles and descriptions, issues, docs, test names.
-- **User-facing UI text** is Polish by default, served through i18n files (`frontend/src/locales/pl.json`,
-  `en.json`). Never hard-code Polish strings in components.
+- **The app is bilingual (Polish / English) with a language switcher.** Every user-facing string goes through
+  i18n: `frontend/src/locales/pl.json` and `en.json` (both always complete), Django translations for backend
+  messages, translated fields for database content (e.g. tickets). Never hard-code UI text in any language.
 - **Talk to the user (Piotr) in Polish**: plans, questions, reports, test instructions.
 
 ## Stack
@@ -71,7 +72,7 @@ Agents cannot see the plan's usage limits; every subagent draws on the same 5-ho
   the whole conversation or concept into the prompt; agents read `CLAUDE.md` and `docs/` themselves.
 - Keep reports short. No agent should read the whole repository "to understand it" when a few files suffice.
 - After a feature is merged, suggest Piotr runs `/clear` before the next one.
-- Models: code agents, tester and devops run on Sonnet, docs on Haiku, reviewer inherits the session model.
+- Models: backend, data, ai and frontend run on Opus; tester and devops on Sonnet; docs on Haiku; reviewer inherits the session model. Opus uses the allowance fastest, which is one more reason for the 2-agents-at-once limit.
 
 ### Rules for all agents
 - No `git commit`, `git push`, `gh pr create` or `gh repo edit` without Piotr's explicit approval.

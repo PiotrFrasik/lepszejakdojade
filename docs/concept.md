@@ -65,8 +65,15 @@ Kraków and Warsaw use the same views; they differ only in tabs and line group c
 - Without an account: only search history, stored in the browser.
 - Journey search, timetables and chat work without logging in.
 
-## 7. Other
+## 7. Language (Polish / English)
+- Language switcher (PL / EN) in the header, available on every page, with or without an account.
+- First visit: language taken from the browser; then the choice is remembered (browser; for logged-in users also on the account).
+- Translated: the whole interface, error messages, ticket names and descriptions, the data sources page, demo ticket labels, e-mails.
+- Dates, times, numbers and prices formatted for the selected language.
+- The AI assistant answers in the selected language (and understands questions in either language).
+- Not translated: stop, street and place names (proper names). Service alerts from transport authorities are shown in their original language (usually Polish) with a short note in English mode.
+
+## 8. Other
 - "Data sources" page with required licence attributions (ZTP Kraków, ZTM Warszawa, WKD, PKP PLK, OpenStreetMap, mkuran.pl where used).
 - City is configuration: adding a city (e.g. Szczecin) means a new config, not new code.
 - Responsive web app that works well on phones.
-- UI language: Polish by default, English available.

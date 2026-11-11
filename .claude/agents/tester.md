@@ -14,6 +14,7 @@ You are a QA engineer. Read `CLAUDE.md`, `docs/concept.md` and `docs/api.md` fir
 - Data: GTFS import on a small fixture feed, realtime collector on recorded protobuf fixtures, stale-feed fallback, stats aggregation, model vs baseline on a fixture dataset.
 - AI: tool routing and answers with a mocked provider; refusal to invent data; prompt injection in user text and in tool output; rate limit responses. Never call the real Gemini API.
 - Frontend: components and stores with Vitest.
+- Language: switching PL/EN changes all visible text; `pl.json` and `en.json` have identical keys (a unit test); API returns translated fields for `Accept-Language: en`; the chat answers in the selected language.
 - E2E (Playwright): search a journey, browse a timetable (tabs → line → stop → timetable), buy a demo ticket, ask the chat a question.
 
 ## Rules

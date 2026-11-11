@@ -32,6 +32,8 @@ Order matters only where "Depends on" says so; everything else can run in parall
 | 25 | Add data sources page and attributions | backend + frontend | foundation | 7 |
 | 26 | Write README, architecture, decisions, AI workflow docs | docs | docs | after each feature |
 | 27 | Set GitHub repository description and topics | devops | foundation | 1 |
+| 28 | Add Polish/English support: i18n setup, language switcher, Accept-Language, user language preference | frontend + backend | i18n | 2, 3 |
 
+Issue 28 belongs to the foundation: set up i18n before screens are built, so no feature hard-codes text.
 Issue 6 should start as early as possible: delay statistics need 2–4 weeks of collected data.
 Tests (`tester`) and review (`reviewer`) run for every issue that changes code.
