@@ -49,6 +49,17 @@ The AI assistant needs a Google Gemini API key. It is not used yet.
 
 Never commit `.env`. It is listed in `.gitignore`.
 
+## Cities
+
+City configuration lives in `backend/cities/config/<id>.yaml`, one file per city.
+
+- Adding a city means adding a file. No code change is needed.
+- Files are validated strictly at startup. A broken file stops `runserver`, `migrate` and every
+  management command. The error names the file and the field.
+- Optional: set `CITY_CONFIG_DIR` in `.env` to load city files from another directory.
+- Public fields are exposed via `GET /api/v1/cities/`. Internal fields (feeds, ticket zones,
+  attributions) are not exposed.
+
 ## Tests
 
 ```bash
@@ -76,7 +87,7 @@ cd frontend && npm run test               # frontend (Vitest), needs Node 22 on 
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log
@@ -88,6 +99,7 @@ docker-compose.yml, Makefile, .env.example
 - [docs/concept.md](docs/concept.md): product concept
 - [docs/api.md](docs/api.md): API contract (the live Swagger UI is linked above)
 - [docs/backlog.md](docs/backlog.md): planned work
+- [docs/decisions.md](docs/decisions.md): short decision records
 - [docs/ai-workflow/log.md](docs/ai-workflow/log.md): log of features built with AI agents
 - `docs/ai-workflow/README.md` (planned): how the app is built with AI agents
 
