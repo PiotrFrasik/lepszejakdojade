@@ -20,6 +20,37 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## CI workflow — 2026-11-11
+**Issues / PRs:** #4 (PR: pending)
+**Branches:** ci/4-github-actions
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Picked #4 as the first backlog item with closed dependencies. No API contract change. This time agents used one worktree, as planned. | Done. |
+| devops (#4) | Wrote `.github/workflows/ci.yml` (backend and frontend jobs). Validated locally in containers: frontend 65 tests pass, backend pytest 80 pass. Found 2 ruff SIM117 errors and 1 ruff format issue in `backend/cities/tests/` (tester's area, left untouched). | Done. |
+| tester | Fixed the ruff errors (formatting only, no assertions changed). Re-ran every workflow command in containers. | All pass: backend 80, frontend 65, build OK with a size warning for the HomeView chunk (1.07 MB). |
+| reviewer | Rounds: 1. | APPROVED, no blocking findings. |
+
+**Review findings that mattered:**
+- Should-fix, applied by devops: `pg_isready` uses `-h localhost` (the PostGIS init server listens on the socket only).
+- Should-fix, applied by devops: `ubuntu-24.04` pinned.
+- Should-fix, applied by devops: `cancel-in-progress` only for PRs.
+- Should-fix, applied by devops: JUnit file renamed to `junit.xml` (already gitignored).
+- Should-fix, applied by devops: unused `GEMINI_API_KEY` env removed.
+- Deliberately skipped: a `.mo` vs `.po` drift check (`compilemessages` output is not byte-stable) and SHA-pinning of actions.
+
+**Manual test (maintainer):** Approved. The maintainer did not find the new files at first. They were in the agent worktree under `.claude/worktrees/`, not in the main checkout.
+
+**Problems and lessons:**
+- Tell the maintainer the worktree path, and that changes reach the main folder only after the PR is merged and `git pull` is run.
+- devops's follow-up report repeated the ruff failures after the tester had already fixed them (stale context). The coordinator verified the state with `git status`.
+- Host port 5432 is blocked on this machine, so local DB checks use a Docker network instead of host ports.
+
+**Follow-ups:**
+- The workflow has not yet run on GitHub. The acceptance check "green on PR" is pending.
+- HomeView bundle size.
+- Consider SHA pinning later.
+
 ## City configuration — 2026-11-11
 **Issues / PRs:** #5, #35 (PRs: pending)
 **Branches:** feat/5-city-config, feat/35-frontend-cities-endpoint
