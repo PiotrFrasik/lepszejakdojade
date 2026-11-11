@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "lepszejakdojade",
-    "tagline": "Public transport in Kraków and Warsaw",
+    "tagline": "Public transport: journeys, timetables and tickets",
     "homeLink": "lepszejakdojade – home",
     "skipToContent": "Skip to content"
   },
@@ -18,7 +18,12 @@
     "label": "City",
     "pickerTitle": "Choose your city",
     "pickerDescription": "Choose the city you want to travel in. You can change it at any time in the page header.",
-    "pickerOptionsLabel": "Available cities"
+    "pickerOptionsLabel": "Available cities",
+    "loading": "Loading cities…",
+    "loadError": "Could not load the list of cities. Check your connection and try again.",
+    "empty": "No cities are available right now.",
+    "retry": "Try again",
+    "retrying": "Trying again…"
   },
   "language": {
     "label": "Language",
