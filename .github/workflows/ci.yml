@@ -54,7 +54,8 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://localhost:6379/0
-      OTP_URL: http://localhost:8080
+      OTP_URL_KRAKOW: http://localhost:8080
+      OTP_URL_WARSZAWA: http://localhost:8081
     steps:
       - uses: actions/checkout@v4
       - name: Install system libraries (GDAL, GEOS, PROJ, gettext)

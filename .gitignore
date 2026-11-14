@@ -29,8 +29,9 @@ test-results/
 # OTP graphs and downloaded data
 otp/**/graph.obj
 otp/**/streetGraph.obj
-otp/data/*.pbf
-otp/data/*.zip
+otp/data/**
+!otp/data/.gitkeep
+!otp/data/.gitignore
 
 # Django
 backend/staticfiles/
