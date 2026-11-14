@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential gdal-bin libgdal-dev libgeos-dev libproj-dev libpq-dev gettext \
+        build-essential gdal-bin libgdal-dev libgeos-dev libproj-dev libpq-dev gettext osmium-tool \
     && apt-get clean \
     && find /var/lib/apt/lists -type f -delete
 
