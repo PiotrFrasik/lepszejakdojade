@@ -16,6 +16,7 @@ x-backend-env: &backend-env
   OTP_URL: http://otp:8080
   GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   REALTIME_POLL_INTERVAL_SECONDS: ${REALTIME_POLL_INTERVAL_SECONDS:-30}
+  UM_WARSZAWA_API_KEY: ${UM_WARSZAWA_API_KEY:-}
 
 x-backend-base: &backend-base
   build:
