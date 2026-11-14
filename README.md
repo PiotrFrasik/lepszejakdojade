@@ -3,7 +3,8 @@
 Public transport web app for Kraków and Warsaw. It is in early development: the foundation
 (containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
 A realtime collector for Kraków trip updates has started and stores data in the database.
-Journey planning, timetables, tickets, live departures and the AI assistant are planned.
+Static GTFS timetables for Kraków and Warsaw are imported every night. Journey planning, the
+timetable screens, tickets, live departures and the AI assistant are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -68,7 +69,8 @@ feeds of each city every `REALTIME_POLL_INTERVAL_SECONDS` (default 30). It runs 
 `celery-worker` and `celery-beat` services, so `docker compose up -d` starts it.
 
 - Feeds come from each city's `gtfs_rt` list in its config file, where `entity: trip_updates`.
-  For Kraków these are `ztp_tram_trip_updates` and `ztp_bus_trip_updates`.
+  For Kraków these are `ztp_tram_trip_updates`, `ztp_bus_trip_updates` and the Mobilis agglomeration
+  bus feed (added in #38).
 - Every poll writes one `FeedFetch` row per feed (status, error, skipped count). Stop visits go to
   `StopEvent`, one row per trip and stop.
 - Check the data in the Django admin at http://localhost:8000/admin/. Create a login first:
@@ -88,8 +90,39 @@ feeds of each city every `REALTIME_POLL_INTERVAL_SECONDS` (default 30). It runs 
   `.env.example`; set them in the settings file if needed.
 
 What the data looks like and what is missing is in [docs/architecture.md](docs/architecture.md).
-Short version: tram messages have no delays until the static GTFS import (#7) is built. Raw
-events are meant to be kept for 60 days; the deletion job comes with #22 and is not built yet.
+Short version: tram messages have no delays. The static GTFS import (#7) is built, but the
+collector does not use it yet. Raw events are meant to be kept for 60 days; the deletion job comes
+with #22 and is not built yet.
+
+## Static timetables (GTFS)
+
+A nightly Celery beat task, `transit_data.import_all_gtfs`, imports the `gtfs_static` feeds of each
+city at `GTFS_IMPORT_HOUR`:`GTFS_IMPORT_MINUTE` (default 03:30, Europe/Warsaw; both in `.env.example`).
+
+- Kraków: ZTP tram and bus feeds. Warsaw: mkuran.pl feeds for ZTM Warszawa and WKD. The national
+  rail feed is not chosen yet (#43).
+- Each import creates a new version. The active version stays in use until the new one has loaded
+  completely.
+- Run an import by hand:
+
+  ```bash
+  docker compose exec backend python manage.py import_gtfs krakow
+  docker compose exec backend python manage.py import_gtfs krakow --feed ztp_tram --force
+  docker compose exec backend python manage.py import_gtfs krakow --feed ztp_tram --file transit_data/fixtures/gtfs/minimal
+  ```
+
+  `--feed` limits the run to one feed. `--force` bypasses the size check (a new version with less
+  than 50% of the active trips or stop times is otherwise rejected). `--file` reads a local GTFS
+  zip or directory instead of downloading; it requires `--feed`. The command exits with status 1 when a feed failed.
+- Optional Django settings with their defaults: `TRANSIT_GTFS_HTTP_TIMEOUT` (120 s),
+  `TRANSIT_GTFS_MAX_BYTES` (1 GB), `TRANSIT_GTFS_MAX_UNCOMPRESSED_BYTES` (5 GB),
+  `TRANSIT_GTFS_DOWNLOAD_MAX_SECONDS` (900 s), `TRANSIT_GTFS_MAX_SKIPPED_RATIO` (0.05),
+  `TRANSIT_GTFS_MIN_SHARE_OF_ACTIVE` (0.5), `TRANSIT_GTFS_EXPIRY_WARNING_DAYS` (14),
+  `TRANSIT_GTFS_KEEP_SUPERSEDED` (1), `TRANSIT_GTFS_KEEP_FAILED` (5). They are not in
+  `.env.example`; set them in the settings file if needed.
+
+Retention, sizes and the import rules are in [docs/architecture.md](docs/architecture.md). Licences
+and attribution of each source are in [docs/decisions.md](docs/decisions.md), entry 13.
 
 ## Tests
 
@@ -134,6 +167,9 @@ not secrets.
   chosen before deployment.
 - The realtime collector runs only while the local stack is up. Continuous collection needs a
   server; hosting is not decided yet.
+- Warsaw's timetable comes from the mkuran.pl community feed, maintained by one person. The importer
+  keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
+- Attributions required by the data licences are not shown in the app yet (#25).
 
 ## Repository layout
 
@@ -150,6 +186,7 @@ docker-compose.yml, Makefile, .env.example
 - [docs/concept.md](docs/concept.md): product concept
 - [docs/api.md](docs/api.md): API contract (the live Swagger UI is linked above)
 - [docs/architecture.md](docs/architecture.md): services, data flow and retention
+- [docs/data-sources.md](docs/data-sources.md) (planned, #25): feeds, licences and attribution
 - [docs/backlog.md](docs/backlog.md): planned work
 - [docs/decisions.md](docs/decisions.md): short decision records
 - [docs/ai-workflow/log.md](docs/ai-workflow/log.md): log of features built with AI agents
