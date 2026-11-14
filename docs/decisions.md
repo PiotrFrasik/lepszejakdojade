@@ -61,3 +61,46 @@ backend files. Not chosen; the reasons are not recorded here.
 **Consequences.**
 - The city picker depends on the API. It shows loading, error, retry and empty states.
 - Adding a city needs no frontend release.
+
+## 4. Service date for feeds without `start_date` is inferred
+
+**Status:** accepted (2026-11-14)
+
+**Context.** Statistics need a service day for each trip (for example, a 00:30 trip of Friday's
+timetable belongs to Thursday's service day). The ZTP Kraków tram TripUpdates feed has no
+`start_date`, so the service day cannot come from the feed.
+
+**Decision.** The realtime collector infers the service date as the local date of the event time
+minus 3 hours, and marks the row `service_date_inferred=True`. A trip seen in the last 4 hours
+reuses its stored service date, so a trip that crosses 03:00 keeps one date.
+
+**Alternatives.** Use the feed's `start_date` when it exists and skip trips without it. Neither ZTP
+feed has `start_date`, so this would store nothing. Wait for the static GTFS import (#7). Collection
+had to start now because delay statistics need weeks of data, and static GTFS alone cannot tell which
+day's run of a daily-repeated `trip_id` an update belongs to. Once #7 exists it can refine the
+inference.
+
+**Consequences.**
+- Rows from ZTP tram feeds carry a flag. Statistics can tell inferred dates from feed dates.
+- A trip first seen after 03:00 that started before 03:00 gets the later date. This is a known
+  limitation.
+- The inference can be replaced once static GTFS (#7) is available.
+
+## 5. A bad value skips only its entity, not the whole poll
+
+**Status:** accepted (2026-11-14)
+
+**Context.** One malformed entity in a feed (overlong id, NUL byte, out-of-range time) rolled back
+the whole poll. A single bad message then removed all data from that poll.
+
+**Decision.** Validation runs per entity and per stop update. A bad value skips only that entity or
+stop update. The skipped count is stored in `FeedFetch.skipped_count`, a summary in `FeedFetch.error`,
+and one warning is logged per poll. The collector never raises; every poll writes a `FeedFetch` row.
+
+**Alternatives.** Reject the whole feed on any bad value (the old behaviour). Rejected because one bad
+entity would discard about 10k valid stop events, and if the bad entity persists in the feed, every
+poll would be lost for as long as it stays there.
+
+**Consequences.**
+- Partial data is possible. Check `skipped_count` in the admin to see it.
+- A feed that is bad in every poll shows a steady skipped count. This is visible, not silent.
