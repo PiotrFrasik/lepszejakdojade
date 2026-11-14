@@ -169,3 +169,36 @@ def krakow_trip_update_urls() -> dict[str, str]:
         for f in city.feeds
         if f.kind == "gtfs_rt" and f.entity == "trip_updates" and f.url
     }
+
+
+# ----------------------------------------------------------------- static GTFS import
+
+
+@pytest.fixture
+def gtfs_city(tmp_path, settings):
+    """Registry with krakow, warszawa and a synthetic city "gtfsville" with static feeds.
+
+    gtfsville feeds: gv_main and gv_second (with URLs) and gv_no_url (``url: null``).
+    """
+    real = Path(settings.CITY_CONFIG_DIR)
+    config_dir = tmp_path / "cities"
+    config_dir.mkdir()
+    for name in ("krakow.yaml", "warszawa.yaml"):
+        (config_dir / name).write_text((real / name).read_text(encoding="utf-8"), encoding="utf-8")
+    data = yaml.safe_load((real / "krakow.yaml").read_text(encoding="utf-8"))
+    data["id"] = "gtfsville"
+    data["timezone"] = "Europe/Warsaw"
+    data["feeds"] = {
+        "gtfs_static": [
+            {"id": "gv_main", "url": "http://gtfsville.invalid/main.zip"},
+            {"id": "gv_second", "url": "http://gtfsville.invalid/second.zip"},
+            {"id": "gv_no_url", "url": None},
+        ],
+        "gtfs_rt": [],
+        "other": [],
+    }
+    (config_dir / "gtfsville.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    settings.CITY_CONFIG_DIR = config_dir
+    registry.clear_cache()
+    yield
+    registry.clear_cache()
