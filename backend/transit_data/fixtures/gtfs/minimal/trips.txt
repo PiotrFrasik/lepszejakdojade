@@ -1,0 +1,5 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id,wheelchair_accessible
+R1,WD,T1_WD_0800,Depot,0,B1,SH1,1
+R1,WD,T1_WD_2350,Depot,0,B1,SH1,1
+R1,WE,T1_WE_0900,Main Square,1,,,2
+R2,WD,T2_WD_0715,Depot,0,,,0

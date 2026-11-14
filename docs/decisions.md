@@ -184,3 +184,106 @@ times. `DEFAULT_TIME_ZONE` is only a fallback until the city details are loaded.
 - New date, time or number displays should use `useFormat()`, not direct `Intl` or `toLocale*` calls.
 - Until the city details load, times use the fallback timezone.
 - An en-GB date style is not offered yet (optional follow-up).
+
+## 10. Static GTFS is stored as versioned rows, loaded with COPY
+
+**Status:** accepted (2026-11-14)
+
+**Context.** Timetables (#9, #10) and journey data need the static GTFS feeds in PostgreSQL. The
+feeds are large: Warsaw ZTM has about 7.4 million stop times and Kraków bus about 1.8 million. A new
+feed must not replace the active data until it is fully loaded and checked.
+
+**Decision.** Each import creates a `FeedVersion` row. All static rows (stops, routes, calendars,
+shapes, trips, stop times, frequencies) point to their version. The import runs in one transaction and
+then switches the feed's active version. Rows are written with PostgreSQL `COPY` (psycopg), not with
+ORM `bulk_create`. GTFS ids are stored as strings. Times are seconds since midnight of the service
+day, so values above 24:00 are allowed. `route_type` is stored as the raw number, and a separate
+`vehicle_type` maps it, including the extended types (Kraków trams use 900). `stop_times` has no
+database foreign key to `trips` or `stops`; the importer checks references and records skipped rows.
+An advisory lock per city and feed stops two imports of the same feed from running at once.
+
+**Alternatives.** ORM `bulk_create`: too slow for this volume (the reason for `COPY`). The reasons
+for the other choices are not recorded here.
+
+**Consequences.**
+- Measured on the real feeds: about 90,000 stop times per second, 210 MB peak memory, about 3.5 GB of
+  database with the active and one previous version.
+- Old versions are removed by a retention rule (see `docs/architecture.md`).
+- Integrity of `stop_times` is the importer's job. A bad row is skipped and listed in the report.
+- The `StopTime` admin filter by feed version is not indexed yet (follow-up).
+
+## 11. Failed imports: retry transient errors, skip only repeated data errors
+
+**Status:** accepted (2026-11-14)
+
+**Context.** The first version skipped any new download whose sha256 matched the last failed
+import. A transient failure (interrupted run, database error, time limit) then blocked the next
+nights too. One bad night could leave a city's timetable stale for good. A separate risk: a feed
+cut by more than half would silently replace good data.
+
+**Decision.** `FeedVersion.data_error` is true only for `GtfsFormatError` and `FeedRejected`. The same
+sha256 is not imported again only when the last failed import was a data error. Any other failure is retried on
+the next run. A new version whose trips or stop times are below 50% of the active version is
+rejected. `--force` bypasses that check. Only the last 5 failed versions are kept
+per feed; they hold no data.
+
+**Alternatives.** Skip every sha256 that failed before. Rejected by review: it can hide a transient
+failure forever. Accept any size change. Rejected: a truncated feed would replace good data.
+
+**Consequences.**
+- A legitimate timetable cut of more than half is rejected every night until someone runs `--force`.
+  Only a log warning shows this. Monitoring is a follow-up.
+- Unlock and failure recording do not hide the original error.
+
+## 12. Warsaw uses the community mkuran.pl feed, not the official ZTM GTFS
+
+**Status:** accepted (2026-11-14)
+
+**Context.** Warsaw has two GTFS sources. The community feed `mkuran.pl/gtfs/warsaw.zip` is built
+from ZTM Warszawa data. The official ZTM feed (`gtfs.ztm.waw.pl/last`) is published by ZTM itself.
+
+**Decision.** Warsaw stays on the mkuran.pl feed (`ztm`). The official feed is kept as the fallback.
+
+Reasons from the research (#38):
+- The official feed has no metro, covers 10 days only, prefixes route and trip ids with the day, and
+  has no stations or accessibility data. It does not send an ETag.
+- - The official feed does include Koleje Mazowieckie, WKD and SKM. This is noted as a candidate for
+  the national rail issue (#43).
+
+**Alternatives.** The official ZTM feed. Rejected for now for the reasons above.
+
+**Consequences.**
+- Risk: the mkuran feed is maintained by one person. The importer keeps the last good version
+  and warns 14 days before the feed expires.
+- Fallback if the feed stops: point the `ztm` URL in `backend/cities/config/warszawa.yaml` to the
+  official feed. Its content differs (see above), so check the import report after the switch.
+
+## 13. Feed licences and attribution
+
+**Status:** accepted (2026-11-14). Verified by the data agent (#38) and read by the maintainer.
+
+**Context.** The app shows and processes public transport data from several publishers. Each
+publisher sets its own attribution rule.
+
+**Decision.** Each city config lists its attributions. The new optional `licence_url` field is
+allowed there. The facts per source:
+
+| Source | Licence | Attribution |
+|---|---|---|
+| ZTP Kraków (GTFS, GTFS-RT) | CC BY 4.0 | Name the publisher and the licence |
+| WKD feed (via mkuran.pl) | CC0 1.0 | None required. mkuran asks to show all names in `attributions.txt` |
+| ZTM Warszawa (via mkuran.pl) | ZTM terms: free reuse, including processing and public display | No attribution text required. The reuser is responsible for data currency |
+| Warsaw open data API (UM Warszawa) | Warsaw open data terms | State the source, when the data was created and retrieved, and that it was processed |
+| OpenStreetMap | ODbL | Added to both cities |
+
+The Warsaw open data API is used by #20; the attribution page is #25.
+
+**Alternatives.** Hard-code the attribution text in the frontend. Rejected: city values belong in
+city config (see decision 1).
+
+**Consequences.**
+- The attribution list must be shown in the app before a public release (#25). Attributions are
+  internal fields in the city config and are not exposed by the API yet.
+- `UM_WARSZAWA_API_KEY` is in `.env.example` and compose, empty. Its resource id is not confirmed
+  (#20).
+- Re-check the licence text when a publisher changes its terms.

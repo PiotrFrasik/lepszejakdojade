@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version
+Testville Transit,https://transit.example.org/,pl,20260101,20281231,fixture-1

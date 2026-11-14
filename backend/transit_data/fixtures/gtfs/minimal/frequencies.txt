@@ -1,0 +1,2 @@
+trip_id,start_time,end_time,headway_secs,exact_times
+T2_WD_0715,07:15:00,09:15:00,600,0

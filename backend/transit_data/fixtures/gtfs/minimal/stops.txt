@@ -1,0 +1,7 @@
+stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type,parent_station,wheelchair_boarding,platform_code
+ST1,,Main Square,50.0614,19.9383,1,,1,
+ST1_A,101,Main Square,50.0615,19.9380,0,ST1,1,A
+ST1_B,102,Main Square,50.0613,19.9386,0,ST1,2,B
+S2,201,Old Bridge,50.0550,19.9450,0,,0,
+S3,301,Łąkowa Street,50.0480,19.9600,0,,,
+S4,401,Depot,50.0400,19.9800,0,,0,

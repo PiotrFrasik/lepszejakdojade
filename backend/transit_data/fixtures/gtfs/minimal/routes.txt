@@ -1,0 +1,3 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+R1,TA,1,Main Square - Depot,900,1f6feb,FFFFFF
+R2,TA,52,Old Bridge - Depot,3,,
