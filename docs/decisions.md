@@ -104,3 +104,83 @@ poll would be lost for as long as it stays there.
 **Consequences.**
 - Partial data is possible. Check `skipped_count` in the admin to see it.
 - A feed that is bad in every poll shows a steady skipped count. This is visible, not silent.
+
+## 6. Language comes only from `Accept-Language`
+
+**Status:** accepted (2026-11-14)
+
+**Context.** The API must return messages in the user's language without a login. Django's
+`LocaleMiddleware` also reads a language cookie and URL prefixes. That gives the API more than one
+language source, and they can disagree.
+
+**Decision.** `core.middleware.AcceptLanguageMiddleware` replaces `LocaleMiddleware`. It reads only the
+`Accept-Language` header. Quality values are honoured, a regional tag matches its base language, and
+the default is `pl`. Every response carries `Content-Language` and `Vary: Accept-Language`. The rules
+are in `docs/api.md`, section "Language negotiation".
+
+**Alternatives.** Keep `LocaleMiddleware`. Rejected: the API has no other language source, so a cookie
+or URL prefix would only add a second source that can disagree with the header.
+
+**Consequences.**
+- A user's saved language (#15) is a UI preference. Clients still send it as `Accept-Language`.
+- Known limitation: redirects from `SecurityMiddleware` have no `Content-Language` header.
+
+## 7. Translated database content uses django-modeltranslation
+
+**Status:** accepted (2026-11-14, decided by the maintainer)
+
+**Context.** Database content such as ticket names and descriptions (#14) must exist in Polish and
+English.
+
+**Decision.** Translated fields use django-modeltranslation, with one column per language (`name_pl`,
+`name_en`). If the requested translation is empty, the `pl` value is returned. The admin shows language
+tabs. `core.serializers.TranslatedModelSerializer` returns one string in the request language. It is
+meant for reads only; content is edited in the admin.
+
+**Alternatives.** A JSON field per model. Not chosen by the maintainer; the reasons are not recorded
+here.
+
+**Consequences.**
+- Each new translated field adds one column per language and a migration.
+- API responses contain one language. Admin-only endpoints are the exception (see `docs/api.md`).
+- The API does not offer writes for translated content.
+
+## 8. API errors are translated, `error.code` is not
+
+**Status:** accepted (2026-11-14)
+
+**Context.** DRF's messages for parser failures, CSRF failures and 429 are untranslated or poor in
+Polish. DRF and Django defaults (404, 405, 415, validation messages) would also show English to Polish
+users.
+
+**Decision.** Our own translated messages cover parser failures, CSRF failures, 429, and the default
+404, 405, 415 and validation messages. `handler400` and `handler403` are set in the URL config.
+`error.code` is a stable identifier and is never translated. The Polish catalogue
+(`backend/locale/pl`) extends DRF's and includes Polish plural forms. `core/drf_messages.py` exists
+only so `makemessages` picks up DRF's strings; it is not used at runtime.
+
+**Alternatives.** Keep DRF's default messages. Rejected for the reasons in the context.
+
+**Consequences.**
+- Clients must use `error.code` for logic. `error.message` and `error.details` are for display.
+- After editing a `.po` file, compile it again (see entry 2).
+
+## 9. Frontend locale and date formatting
+
+**Status:** accepted (2026-11-14)
+
+**Context.** A first visit must follow the browser language. Transit times must match the city's
+timetable, not the timezone of the device.
+
+**Decision.** The locale is the stored choice, then `navigator.languages`, then `pl`. The detected
+language is not saved, so it follows the browser until the user chooses. `<html lang>` is set on
+startup. Dates, times and numbers are formatted through `useFormat()` (`frontend/src/i18n/format.ts`).
+Times always use the city's timezone. English uses the vue-i18n `en` locale: US date style and 24-hour
+times. `DEFAULT_TIME_ZONE` is only a fallback until the city details are loaded.
+
+**Alternatives.** Format with the browser's timezone. Not chosen; the reasons are not recorded here.
+
+**Consequences.**
+- New date, time or number displays should use `useFormat()`, not direct `Intl` or `toLocale*` calls.
+- Until the city details load, times use the fallback timezone.
+- An en-GB date style is not offered yet (optional follow-up).
