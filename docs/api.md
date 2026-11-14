@@ -11,9 +11,38 @@ The generated OpenAPI schema (drf-spectacular, `/api/schema/`, Swagger UI at `/a
 - Errors: `{ "error": { "code": "not_found", "message": "…" } }` with the matching HTTP status.
   Validation errors (`400`, code `validation_error`) may add an optional `details` object mapping field names
   to lists of messages, e.g. `{ "details": { "email": ["Enter a valid e-mail address."] } }`. Clients must not rely on it being present.
+  Keys are field names; nested fields use dotted paths (`"items.1.n"` = field `n` of the second item of `items`);
+  errors not tied to one field use the key `non_field_errors`.
 - Auth: endpoints marked 🔒 require a logged-in user.
 - Language: clients send `Accept-Language: pl` or `en` (default `pl`). Translatable fields (ticket names, descriptions, error messages) come back in that language. Proper names (stops, streets) are never translated.
+  See **Language negotiation** below for the exact rules.
 - Realtime fields are nullable; `null` means no live data, never a guess.
+
+## Language negotiation (i18n, #28)
+Applies to every endpoint under `/api/v1/`.
+- Supported languages: `pl` (default) and `en`.
+- The server reads `Accept-Language` and honours quality values (`q=`). It picks the first supported language
+  by preference; a regional tag matches its base language (`en-GB` → `en`, `pl-PL` → `pl`).
+- No header, an empty header, or only unsupported languages (e.g. `de`) → `pl`. Never an error.
+- No other language source for the API (no cookie, no `?lang=` parameter, no URL prefix). Once accounts exist (#15),
+  the user's saved `language` is a UI preference only; clients still send it as `Accept-Language`.
+- Every response (including errors) carries a `Content-Language: pl|en` header with the language actually used.
+- Errors: `error.message` and the messages in `error.details` are translated; `error.code` is a stable,
+  untranslated identifier that clients must use for logic. This covers DRF and Django defaults too
+  (`404`, `405`, `415`, `429`, validation messages), not only our own messages.
+- Translatable database content (e.g. ticket names and descriptions, #14) is stored per language and returned as a
+  single string in the negotiated language; if the requested translation is empty the `pl` value is returned.
+  Responses never contain both languages side by side, except admin-only endpoints.
+
+Example:
+```
+GET /api/v1/cities/unknown/
+Accept-Language: de, en;q=0.8
+
+HTTP/1.1 404 Not Found
+Content-Language: en
+{ "error": { "code": "not_found", "message": "Not found." } }
+```
 
 ## Planned endpoints (details are added per feature)
 | Area | Method & path |
