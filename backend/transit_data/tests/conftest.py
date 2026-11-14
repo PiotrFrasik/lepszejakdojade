@@ -159,3 +159,13 @@ def get_feed(city_id: str, feed_id: str):
     city = registry.get_city(city_id)
     feed = next(f for f in city.feeds if f.id == feed_id)
     return city, feed
+
+
+def krakow_trip_update_urls() -> dict[str, str]:
+    """feed id -> URL for every Kraków TripUpdates feed in the shipped config."""
+    city = registry.get_city("krakow")
+    return {
+        f.id: f.url
+        for f in city.feeds
+        if f.kind == "gtfs_rt" and f.entity == "trip_updates" and f.url
+    }
