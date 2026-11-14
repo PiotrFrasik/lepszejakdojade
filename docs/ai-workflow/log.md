@@ -20,6 +20,38 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## National rail GTFS — 2026-11-14
+**Issues / PRs:** #43, #53 (PRs: pending)
+**Branches:** feat/43-national-rail-gtfs, ci/53-osmium-in-ci
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Picked #43 and #53. #43 was picked because backlog item 7 ("GTFS incl. national rail") was not finished. No API contract change. | Done. |
+| data (#43) | Chose the source (mkuran.pl "Polish Trains", one feed `rail` for both cities). Added the area filter, the import pipeline changes, the OTP input prep and the loader fix (stops without coordinates inherit their parent's position). Two fix rounds. | Done. |
+| backend (#43) | `FeedFilter` in the city registry, shared `_parse_bbox`, `rail` entries and attributions in both city YAML files. | Done. |
+| devops (#53) | Backend CI job installs `osmium-tool`. | Done. |
+| tester (#43) | 144 tests. Then +20 tests for coordinate inheritance. Then fixed 8 tests and added 24 new. Full backend run: 884 passed, ruff clean. | Passing. |
+| reviewer (#53) | Rounds: 1. | APPROVED. |
+| reviewer (#43) | Rounds: 2. | Round 1 APPROVED with should-fixes, applied. Round 2 APPROVED. |
+
+**Review findings that mattered:**
+- Tester: the loader skipped platforms without coordinates that the filter had kept. The import failed. Fixed by inheriting the nearest parent's position.
+- Reviewer, should-fix, all fixed: removing a `filter` left the cut OTP file trusted through shared metadata (now separate source metadata and cleanup). Clipped trips could start or end untimed (now only timed calls are kept). `agency.txt` was empty for single-agency feeds (now kept whole). The size limit was missing on the OTP path.
+- Reviewer, nits, not fixed: a non-integer `stop_sequence` is skipped silently; the OTP path opens the archive twice for the size check; licence strings in the YAML are English sentences and need i18n or short codes for #25.
+
+**Manual test (maintainer):** Approved.
+
+**Problems and lessons:**
+- The path guard blocked the data agent from editing `backend/cities/` (registry and city YAML). The cross-area change needed an extra backend run. Plan such splits up front.
+- The data agent could not remove a tester's xfail marker, because tests belong to `tester`. Route test edits to `tester`.
+- Worktrees have no `.env` (it is git-ignored). The manual test needed a copy of it, plus `DB_PORT=15443` and `REDIS_PORT=16443`, because host port 5432 is blocked.
+
+**Follow-ups:**
+- #51: nightly OTP rebuilds. Graphs are not yet rebuilt with rail; re-measure build time and memory.
+- #25: data sources page with the rail attributions.
+- Rail realtime (Polish Trains updates) is not in scope.
+- Confirm #53 is green in CI on the PR.
+
 ## OpenTripPlanner graphs — 2026-11-14
 **Issues / PRs:** #8, #46, #47 (PRs: pending)
 **Branches:** feat/8-otp-graphs, feat/46-otp-city-config, chore/47-otp-compose
