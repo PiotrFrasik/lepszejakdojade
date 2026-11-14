@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -188,11 +189,19 @@ LOGGING = {
 
 # Realtime collector (transit_data)
 REALTIME_POLL_INTERVAL_SECONDS = float(env_str("REALTIME_POLL_INTERVAL_SECONDS", "30"))
+# Static GTFS import time, local to CELERY_TIMEZONE (Europe/Warsaw).
+GTFS_IMPORT_HOUR = int(env_str("GTFS_IMPORT_HOUR", "3"))
+GTFS_IMPORT_MINUTE = int(env_str("GTFS_IMPORT_MINUTE", "30"))
 CELERY_BEAT_SCHEDULE = {
     "collect-trip-updates": {
         "task": "transit_data.collect_trip_updates",
         "schedule": REALTIME_POLL_INTERVAL_SECONDS,
         # Drop runs that waited longer than one interval instead of piling them up.
         "options": {"expires": REALTIME_POLL_INTERVAL_SECONDS},
+    },
+    # Nightly static GTFS import; Warsaw feed is a rolling 30-day window, so it must run daily.
+    "import-gtfs-nightly": {
+        "task": "transit_data.import_all_gtfs",
+        "schedule": crontab(hour=GTFS_IMPORT_HOUR, minute=GTFS_IMPORT_MINUTE),
     },
 }
