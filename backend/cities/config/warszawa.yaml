@@ -2,7 +2,8 @@
 # Schema and validation: backend/cities/registry.py. The file name must equal `id`.
 # Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
 # Internal only (never returned by the API): feeds, ticket_zones, attributions.
-# Values marked UNVERIFIED must be checked against the publisher before production use.
+# Feed URLs and licences were checked against the publishers on the date in each comment.
+# A null URL is deliberate; the comment next to it gives the reason.
 
 id: warszawa
 names:
@@ -44,19 +45,28 @@ realtime:
 
 feeds:
   gtfs_static:
-    # UNVERIFIED: community GTFS built from ZTM Warszawa data (mkuran.pl).
+    # checked 2026-11-14: community GTFS built from ZTM Warszawa data by mkuran.pl, rebuilt
+    # daily. Includes ZTM buses, trams, metro and SKM; does NOT include WKD (see below).
     - id: ztm
       url: https://mkuran.pl/gtfs/warsaw.zip
-    # UNVERIFIED: WKD (Warszawska Kolej Dojazdowa) feed.
+    # checked 2026-11-14: WKD (Warszawska Kolej Dojazdowa) by mkuran.pl, CC0.
+    # The feed published on that date has service only until about 2026-12-12; check that
+    # it has been extended before then.
     - id: wkd
       url: https://mkuran.pl/gtfs/wkd.zip
-    # UNVERIFIED: national rail feed not chosen yet.
+    # national rail: see #43
     - id: rail
       url: null
   gtfs_rt: []
   other:
-    # UNVERIFIED: vehicle positions from the City of Warsaw open data API (needs an API key
-    # passed via environment, never stored here). Not GTFS-RT.
+    # checked 2026-11-14: vehicle positions from the City of Warsaw open data API. Not GTFS-RT.
+    # Query parameters (the schema has no place for them, so they are documented here):
+    #   resource_id=f2e5503e-927d-4ad3-9500-4ab9e55deb59
+    #   type=1 for buses, type=2 for trams
+    #   apikey from the environment variable UM_WARSZAWA_API_KEY (never stored here)
+    # Auth errors come back as HTTP 200 with {"result": "false", ...}, so the client must
+    # check the body, not only the status code. The endpoint exists, but resource_id was not
+    # yet confirmed with a real API key; it must be confirmed with a real key in #20.
     - id: um_vehicle_positions
       kind: um_warszawa_api
       url: https://api.um.warszawa.pl/api/action/busestrams_get/
@@ -69,15 +79,33 @@ ticket_zones:
     names: { pl: Strefa 2, en: Zone 2 }
 
 attributions:
+  # checked 2026-11-14 (read manually): open terms; free reuse incl. processing, modification
+  # and public display in external apps; no mandated attribution text; the reuser is
+  # responsible for keeping data current. ZTM also publishes an official GTFS at
+  # https://gtfs.ztm.waw.pl/last (switch from mkuran to be decided separately).
   - name: Zarząd Transportu Miejskiego w Warszawie
     url: https://www.ztm.waw.pl/
-    # UNVERIFIED: licence.
-    licence: null
+    licence: ZTM Warszawa timetable data terms of use
+    licence_url: https://www.ztm.waw.pl/pliki-do-pobrania/dane-rozkladowe/
+  # checked 2026-11-14: reuse requires stating the source, when the data was created and
+  # retrieved, and that the data was processed (to be shown on the data sources page, #25).
   - name: Miasto Stołeczne Warszawa – otwarte dane
     url: https://api.um.warszawa.pl/
-    # UNVERIFIED: licence.
-    licence: null
+    licence: Warsaw Open Data terms of reuse
+    licence_url: https://api.um.warszawa.pl/index.php?wcag=true&opc=5,1,0,0,
+  # checked 2026-11-14: mkuran.pl asks to expose all attributions listed in the feed's
+  # attributions.txt, not only this entry.
   - name: Mikołaj Kuranowski – Warsaw GTFS
     url: https://mkuran.pl/gtfs/
-    # UNVERIFIED: licence.
-    licence: null
+    licence: Provided as is; carries ZTM terms; bus shapes ODbL
+    licence_url: https://mkuran.pl/gtfs/
+  # checked 2026-11-14
+  - name: Warszawska Kolej Dojazdowa (GTFS by mkuran.pl)
+    url: https://mkuran.pl/gtfs/
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+  # Street and map data (e.g. the OpenTripPlanner street graph).
+  - name: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0
+    licence_url: https://opendatacommons.org/licenses/odbl/1-0/
