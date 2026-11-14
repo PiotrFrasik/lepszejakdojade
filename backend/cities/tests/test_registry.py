@@ -176,3 +176,107 @@ def test_registry_is_cached_until_cleared(config_dir):
     assert len(all_cities()) == 1
     registry.clear_cache()
     assert len(all_cities()) == 2
+
+
+# ------------------------------------------------------------ attribution licence_url
+
+
+def load_with_attribution(config_dir, **extra):
+    data = valid_data()
+    data["attributions"][0].update(extra)
+    write(config_dir, data)
+    registry.clear_cache()
+    return get_city("testville")
+
+
+def test_licence_url_may_be_omitted(config_dir):
+    city = load_with_attribution(config_dir)
+    assert city.attributions[0].licence_url is None
+
+
+def test_licence_url_explicit_null_is_accepted(config_dir):
+    city = load_with_attribution(config_dir, licence_url=None)
+    assert city.attributions[0].licence_url is None
+
+
+@pytest.mark.parametrize(
+    "value", ["https://creativecommons.org/licenses/by/4.0/", "http://example.com/licence"]
+)
+def test_licence_url_valid_http_urls_are_accepted(config_dir, value):
+    city = load_with_attribution(config_dir, licence="CC BY 4.0", licence_url=value)
+    assert city.attributions[0].licence_url == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["not a url", "", "ftp://example.com/x", "creativecommons.org", 42, True, ["https://a.b"]],
+)
+def test_licence_url_invalid_values_are_rejected_with_path(config_dir, value):
+    with pytest.raises(CityConfigError, match=r"attributions\[0\]\.licence_url"):
+        load_with_attribution(config_dir, licence_url=value)
+
+
+def test_licence_url_error_reports_index_of_second_attribution(config_dir):
+    data = valid_data()
+    data["attributions"].append(
+        {"name": "B", "url": "https://b.example/", "licence": None, "licence_url": "nope"}
+    )
+    write(config_dir, data)
+    with pytest.raises(CityConfigError, match=r"attributions\[1\]\.licence_url"):
+        all_cities()
+
+
+def test_unknown_attribution_key_is_still_rejected(config_dir):
+    with pytest.raises(CityConfigError, match=r"attributions\[0\]"):
+        load_with_attribution(config_dir, licence_link="https://example.com/")
+
+
+# ------------------------------------------------------------------ shipped configs
+
+
+@pytest.fixture
+def real_cities():
+    registry.clear_cache()
+    return {c.id: c for c in all_cities()}
+
+
+def test_shipped_attributions_have_licence_and_licence_url(real_cities):
+    for city in real_cities.values():
+        assert city.attributions, city.id
+        for attribution in city.attributions:
+            assert attribution.licence, f"{city.id}/{attribution.name}: licence"
+            assert attribution.licence_url, f"{city.id}/{attribution.name}: licence_url"
+            assert attribution.licence_url.startswith(("http://", "https://"))
+
+
+def test_shipped_osm_attribution_in_both_cities(real_cities):
+    for city in real_cities.values():
+        assert any("openstreetmap" in a.url for a in city.attributions), city.id
+
+
+def test_shipped_warszawa_includes_wkd_attribution(real_cities):
+    names = " ".join(a.name for a in real_cities["warszawa"].attributions)
+    assert "WKD" in names or "Warszawska Kolej Dojazdowa" in names
+
+
+def test_shipped_feeds_without_url_are_only_rail(real_cities):
+    for city in real_cities.values():
+        for feed in city.feeds:
+            if feed.url is None:
+                assert feed.id == "rail", f"{city.id}/{feed.id} has no url"
+
+
+def test_shipped_krakow_includes_mobilis_feeds(real_cities):
+    ids = {f.id for f in real_cities["krakow"].feeds}
+    assert {
+        "ztp_mobilis_bus",
+        "ztp_mobilis_vehicle_positions",
+        "ztp_mobilis_trip_updates",
+        "ztp_mobilis_service_alerts",
+    } <= ids
+
+
+def test_shipped_feed_ids_are_unique_per_city(real_cities):
+    for city in real_cities.values():
+        ids = [f.id for f in city.feeds]
+        assert len(ids) == len(set(ids)), city.id
