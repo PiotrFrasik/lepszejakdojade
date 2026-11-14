@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 12:49+0100\n"
+"POT-Creation-Date: 2026-11-14 09:40+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,22 +21,108 @@ msgstr ""
 msgid "City not found."
 msgstr ""
 
-#: config/settings/base.py:107
+#: config/settings/base.py:112
 msgid "Polish"
 msgstr ""
 
-#: config/settings/base.py:108
+#: config/settings/base.py:113
 msgid "English"
 msgstr ""
 
-#: core/exceptions.py:43
+#: core/drf_messages.py:12
+msgid "A valid biginteger is required."
+msgstr ""
+
+#: core/drf_messages.py:13
+msgid "Datetime value out of range."
+msgstr ""
+
+#: core/drf_messages.py:14
+#, python-brace-format
+msgid "Ensure this field has at least {min_length} elements."
+msgstr ""
+
+#: core/drf_messages.py:15
+#, python-brace-format
+msgid "Ensure this field has no more than {max_length} elements."
+msgstr ""
+
+#: core/drf_messages.py:17
+msgid ""
+"Enter a valid \"slug\" consisting of Unicode letters, numbers, underscores, "
+"or hyphens."
+msgstr ""
+
+#: core/drf_messages.py:19
+msgid "Integer value too large to convert to float"
+msgstr ""
+
+#: core/drf_messages.py:20
+#, python-brace-format
+msgid "Invalid datetime for the timezone \"{timezone}\"."
+msgstr ""
+
+#: core/drf_messages.py:21
+msgid "Must be a valid UUID."
+msgstr ""
+
+#: core/drf_messages.py:22
+msgid "Must be a valid boolean."
+msgstr ""
+
+#: core/drf_messages.py:23
+msgid "Not a valid string."
+msgstr ""
+
+#: core/drf_messages.py:24
+#, python-brace-format
+msgid "Surrogate characters are not allowed: U+{code_point:X}."
+msgstr ""
+
+#: core/drf_messages.py:25
+#, python-brace-format
+msgid "The number of days must be between {min_days} and {max_days}."
+msgstr ""
+
+#: core/drf_messages.py:26
+msgid "This dictionary may not be empty."
+msgstr ""
+
+#: core/exceptions.py:73
+msgid "Too many requests. Try again later."
+msgstr ""
+
+#: core/exceptions.py:77
+#, python-format
+msgid "Too many requests. Try again in %(seconds)d second."
+msgid_plural "Too many requests. Try again in %(seconds)d seconds."
+msgstr[0] ""
+msgstr[1] ""
+
+#: core/exceptions.py:103
 msgid "Invalid input."
 msgstr ""
 
+#: core/exceptions.py:112
+msgid "The request body could not be parsed."
+msgstr ""
+
+#: core/exceptions.py:115
+msgid "CSRF verification failed."
+msgstr ""
+
 #: core/views.py:86
+msgid "Bad request."
+msgstr ""
+
+#: core/views.py:95
+msgid "You do not have permission to perform this action."
+msgstr ""
+
+#: core/views.py:105
 msgid "Not found."
 msgstr ""
 
-#: core/views.py:93
+#: core/views.py:112
 msgid "A server error occurred."
 msgstr ""

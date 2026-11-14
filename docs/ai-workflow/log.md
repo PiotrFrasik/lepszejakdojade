@@ -20,6 +20,33 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Bilingual support (i18n) — 2026-11-14
+**Issues / PRs:** #28 (backend), #30 (frontend) (PRs: pending)
+**Branches:** feat/28-backend-i18n, feat/30-frontend-i18n
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Added the "Language negotiation" contract to `docs/api.md` before implementation. Moved the user `language` field to #15 and account sync to #17 (issue comments). Pasted the contract into the agent prompts, because worktrees do not see uncommitted main changes. | Done. |
+| backend (#28) | `AcceptLanguageMiddleware`. Translated errors, including DRF and Django defaults (404, 405, 415, 429, parse errors, validation details). `handler400` and `handler403`. django-modeltranslation and `TranslatedModelSerializer`. Polish catalogue with 25 messages, including Polish plurals. | Done. 217 tests passing at hand-off. |
+| frontend (#30) | Browser language detection. `<html lang>` set on startup. Date, time and number formats, `format` helpers and `useFormat` composable (city timezone). Unit strings in both locales. No hard-coded text found in existing components. | Done. 65 tests at hand-off. |
+| tester | Backend +70 tests (287 total). Frontend +50 tests (115 total). No production bugs. Corrected its own loose assertion ("1.0 km" was a guess; the actual output is "1 km"). | Passing. |
+| reviewer | Rounds: 1 per branch. | Frontend APPROVED, backend APPROVED. All should-fix items fixed. |
+
+**Review findings that mattered:**
+- Frontend, fixed: a misleading comment, an undocumented `DEFAULT_TIME_ZONE` fallback, and a loose km assertion (now exact).
+- Backend, fixed: Polish "2 elementów" wording, `ParseError` override limited to real parser failures, 429 seconds rounded up (ceil), serializer docstring, and the `details` key format (dotted paths, `non_field_errors`) added to the contract.
+
+**Manual test (maintainer):** Passed on both branches.
+**Problems and lessons:**
+- The path guard blocks code agents from writing tests. Their own checks ran as temporary files, and the tester re-wrote them as real tests.
+- Port 5432 is taken by the main stack (realtime collector). Test stacks ran on `DB_PORT=55432`, `REDIS_PORT=56379`, `BACKEND_PORT=58000`, `FRONTEND_PORT=55173`.
+- In PowerShell, `curl` is an alias for `Invoke-WebRequest`. Manual-test instructions must use `curl.exe` and `$env:VAR=...` syntax.
+- With `DEBUG=True`, unknown `/api/` URLs return Django's HTML debug 404. This existed before #28.
+
+**Follow-ups:**
+- User `language` on the account: #15 (model) and #17 (sync).
+- Optional en-GB date style, if the maintainer wants it.
+
 ## Kraków realtime collector — 2026-11-14
 **Issues / PRs:** #6 (PR: pending)
 **Branches:** feat/6-krakow-realtime-collector

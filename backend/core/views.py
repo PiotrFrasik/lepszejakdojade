@@ -80,6 +80,25 @@ def _is_api_request(request) -> bool:
     return request.path.startswith("/api/")
 
 
+def bad_request(request, exception=None):
+    """400 handler (e.g. disallowed host): contract error format for /api/ paths."""
+    if _is_api_request(request):
+        return JsonResponse(error_body("bad_request", _("Bad request.")), status=400)
+    return defaults.bad_request(request, exception)
+
+
+def permission_denied(request, exception=None):
+    """403 handler outside DRF views: contract error format for /api/ paths."""
+    if _is_api_request(request):
+        return JsonResponse(
+            error_body(
+                "permission_denied", _("You do not have permission to perform this action.")
+            ),
+            status=403,
+        )
+    return defaults.permission_denied(request, exception)
+
+
 def not_found(request, exception=None):
     """404 handler: contract error format for /api/ paths, Django default elsewhere."""
     if _is_api_request(request):

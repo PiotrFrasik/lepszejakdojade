@@ -31,6 +31,8 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
 APP_VERSION = env_str("APP_VERSION", "dev")
 
 INSTALLED_APPS = [
+    # Must come before django.contrib.admin (translated fields in admin forms).
+    "modeltranslation",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -50,7 +52,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
+    # Language from Accept-Language only (replaces django.middleware.locale.LocaleMiddleware).
+    "core.middleware.AcceptLanguageMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -102,7 +105,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Internationalisation (full setup in #28)
+# Internationalisation. The request language comes only from Accept-Language
+# (core.middleware.AcceptLanguageMiddleware); LANGUAGE_CODE is the fallback.
 LANGUAGE_CODE = "pl"
 LANGUAGES = [
     ("pl", _("Polish")),
@@ -110,6 +114,13 @@ LANGUAGES = [
 ]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 USE_I18N = True
+
+# Translated model fields (django-modeltranslation): one column per language,
+# e.g. name_pl / name_en. Reading `name` returns the active language and falls
+# back to Polish when the translation is empty. See core.serializers.TranslatedModelSerializer.
+MODELTRANSLATION_DEFAULT_LANGUAGE = "pl"
+MODELTRANSLATION_LANGUAGES = ("pl", "en")
+MODELTRANSLATION_FALLBACK_LANGUAGES = ("pl",)
 TIME_ZONE = "Europe/Warsaw"
 USE_TZ = True
 
