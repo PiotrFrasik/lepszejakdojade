@@ -115,6 +115,20 @@ def _enum(value: str, allowed: range, default, stats: FileStats, column: str):
     return number
 
 
+def _point(lat_text: str, lon_text: str) -> str | None:
+    """EWKT point for valid coordinates; None for missing, invalid or (0, 0) ones."""
+    lat_text, lon_text = lat_text.strip(), lon_text.strip()
+    if not lat_text and not lon_text:
+        return None
+    try:
+        lat, lon = float(lat_text), float(lon_text)
+    except ValueError:
+        return None
+    if -90 <= lat <= 90 and -180 <= lon <= 180 and (lat, lon) != (0, 0):
+        return f"SRID=4326;POINT({lon!r} {lat!r})"
+    return None
+
+
 def _color(value: str, stats: FileStats, column: str) -> str:
     value = value.strip().lstrip("#")
     if not value:
@@ -269,10 +283,50 @@ class _Loader:
 
     # ------------------------------------------------------------------ stops
 
+    def _inherited_points(self) -> dict[str, str]:
+        """Position for every stop without coordinates whose parent chain has one.
+
+        GTFS lets platforms leave out coordinates when their parent station has them; such
+        a stop inherits the nearest ancestor's position. The parent may come later in the
+        file, so this reads stops.txt once before the load.
+        """
+        points: dict[str, str] = {}
+        parents: dict[str, str] = {}
+        missing: list[str] = []
+        read: set[str] = set()
+        with self.source.table("stops.txt") as t:
+            c_id, c_lat, c_lon = t.col("stop_id"), t.col("stop_lat"), t.col("stop_lon")
+            c_parent = t.col("parent_station")
+            for _number, row in t.rows:
+                stop_id = row[c_id].strip()
+                # Duplicates are skipped by the load; only the first row counts.
+                if not stop_id or stop_id in read:
+                    continue
+                read.add(stop_id)
+                point = _point(row[c_lat], row[c_lon])
+                if point is not None:
+                    points[stop_id] = point
+                    continue
+                parent = row[c_parent].strip()
+                if parent:
+                    parents[stop_id] = parent
+                    missing.append(stop_id)
+        inherited = {}
+        for stop_id in missing:
+            seen = {stop_id}
+            parent = parents.get(stop_id)
+            while parent and parent not in seen and parent not in points:
+                seen.add(parent)
+                parent = parents.get(parent)
+            if parent in points:
+                inherited[stop_id] = points[parent]
+        return inherited
+
     def load_stops(self) -> int:
         stats = self.report.file("stops.txt")
         seen: set[str] = set()
         parents: dict[str, str] = {}
+        inherited = self._inherited_points()
 
         def rows():
             with self.source.table("stops.txt") as t:
@@ -304,15 +358,10 @@ class _Loader:
                     location_type = _enum(
                         row[c["location_type"]], range(5), 0, stats, "location_type"
                     )
-                    point = None
-                    lat_text, lon_text = row[c["stop_lat"]].strip(), row[c["stop_lon"]].strip()
-                    if lat_text or lon_text:
-                        try:
-                            lat, lon = float(lat_text), float(lon_text)
-                        except ValueError:
-                            lat = lon = math.nan
-                        if -90 <= lat <= 90 and -180 <= lon <= 180 and (lat, lon) != (0, 0):
-                            point = f"SRID=4326;POINT({lon!r} {lat!r})"
+                    point = _point(row[c["stop_lat"]], row[c["stop_lon"]])
+                    if point is None and stop_id in inherited:
+                        point = inherited[stop_id]
+                        stats.correct("missing or invalid coordinates, used the parent station's")
                     if point is None and location_type <= 2:
                         stats.skip(number, "missing or invalid coordinates", stop_id)
                         continue
