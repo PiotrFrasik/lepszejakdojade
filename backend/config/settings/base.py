@@ -1,9 +1,11 @@
 """Settings shared by every environment. Values come from environment variables."""
 
+import math
 import os
 from pathlib import Path
 
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -22,6 +24,22 @@ def env_bool(name: str, default: bool = False) -> bool:
 
 def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+
+
+def env_float(name: str, default: float, min_value: float | None = None) -> float:
+    """A finite number from the environment; unset or blank means ``default``."""
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        number = float(value)
+    except ValueError:
+        raise ImproperlyConfigured(f"{name} must be a number, got {value!r}") from None
+    if not math.isfinite(number):
+        raise ImproperlyConfigured(f"{name} must be a finite number, got {value!r}")
+    if min_value is not None and number < min_value:
+        raise ImproperlyConfigured(f"{name} must be at least {min_value}, got {value!r}")
+    return number
 
 
 # Core
@@ -141,7 +159,19 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CITY_CONFIG_DIR = Path(env_str("CITY_CONFIG_DIR") or BASE_DIR / "cities" / "config")
 
 # External services
+# DEPRECATED: one OpenTripPlanner instance per city. Use cities.registry.get_otp_url(city_id),
+# which reads OTP_URL_<CITY_ID> (e.g. OTP_URL_KRAKOW). Removed once compose drops it (#47).
 OTP_URL = env_str("OTP_URL", "http://localhost:8080")
+
+# OpenTripPlanner graph build. In containers ./otp is mounted at /otp.
+# Config directory (build-config.json, router-config.json, ...).
+OTP_CONFIG_DIR = Path(env_str("OTP_CONFIG_DIR") or BASE_DIR.parent / "otp")
+# Working directory: per-city OSM extracts, GTFS copies and built graphs.
+OTP_DATA_DIR = Path(env_str("OTP_DATA_DIR") or BASE_DIR.parent / "otp" / "data")
+# osmium-tool executable used to clip the OSM extract.
+OTP_OSMIUM_BIN = env_str("OTP_OSMIUM_BIN").strip() or "osmium"
+# Buffer (km) added around the GTFS stops' bounding box when clipping the OSM extract.
+OTP_BBOX_BUFFER_KM = env_float("OTP_BBOX_BUFFER_KM", 3.0, min_value=0)
 
 # Timeout (seconds) for dependency checks in the health endpoint
 HEALTH_CHECK_TIMEOUT = 2

@@ -1,7 +1,7 @@
 # City configuration: Warsaw.
 # Schema and validation: backend/cities/registry.py. The file name must equal `id`.
 # Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
-# Internal only (never returned by the API): feeds, ticket_zones, attributions.
+# Internal only (never returned by the API): feeds, ticket_zones, attributions, otp.
 # Feed URLs and licences were checked against the publishers on the date in each comment.
 # A null URL is deliberate; the comment next to it gives the reason.
 
@@ -109,3 +109,10 @@ attributions:
     url: https://www.openstreetmap.org/copyright
     licence: ODbL 1.0
     licence_url: https://opendatacommons.org/licenses/odbl/1-0/
+
+# OpenTripPlanner graph build. Optional `bbox: [min_lon, min_lat, max_lon, max_lat]` overrides
+# the clip area, which by default is derived from the GTFS stops.
+otp:
+  # checked 2026-11-14: Geofabrik regional extract (Mazowieckie), ODbL (OpenStreetMap
+  # attribution already present above).
+  osm_url: https://download.geofabrik.de/europe/poland/mazowieckie-latest.osm.pbf
