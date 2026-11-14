@@ -1,0 +1,4 @@
+# Prepared OTP inputs, downloads and built graphs (see otp/README.md). Never commit them.
+*
+!.gitignore
+!.gitkeep
