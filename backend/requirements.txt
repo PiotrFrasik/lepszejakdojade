@@ -5,3 +5,5 @@ psycopg[binary]==3.3.8
 celery==5.7.0
 redis==8.1.0
 PyYAML==6.0.3
+gtfs-realtime-bindings==3.0.0
+protobuf==7.36.2
