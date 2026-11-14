@@ -75,11 +75,20 @@ class Realtime:
 
 
 @dataclass(frozen=True)
+class FeedFilter:
+    """Limits a large static feed to the city's area (applied by transit_data on import)."""
+
+    bbox: tuple[float, float, float, float]  # (min_lon, min_lat, max_lon, max_lat)
+    exclude_agencies: tuple[str, ...] = ()  # agency_ids already served by another feed
+
+
+@dataclass(frozen=True)
 class Feed:
     id: str
     url: str | None
     kind: str  # "gtfs_static", "gtfs_rt" or a free-form kind for other sources
     entity: str | None = None  # GTFS-RT entity type, only for kind "gtfs_rt"
+    filter: FeedFilter | None = None  # area filter, only for kind "gtfs_static"
 
 
 @dataclass(frozen=True)
@@ -326,22 +335,38 @@ def _parse_otp(v: _Validator, raw: Any) -> OtpConfig:
     if not isinstance(osm_url, str) or not _HTTPS_URL_RE.match(osm_url):
         v.fail("otp.osm_url", "expected an https URL")
 
-    bbox = None
-    if raw.get("bbox") is not None:
-        values = v.sequence(raw["bbox"], "otp.bbox")
-        if len(values) != 4:
-            v.fail("otp.bbox", "expected [min_lon, min_lat, max_lon, max_lat]")
-        min_lon = v.number(values[0], "otp.bbox[0]", -180, 180)
-        min_lat = v.number(values[1], "otp.bbox[1]", -90, 90)
-        max_lon = v.number(values[2], "otp.bbox[2]", -180, 180)
-        max_lat = v.number(values[3], "otp.bbox[3]", -90, 90)
-        if min_lon >= max_lon:
-            v.fail("otp.bbox", "min_lon must be less than max_lon")
-        if min_lat >= max_lat:
-            v.fail("otp.bbox", "min_lat must be less than max_lat")
-        bbox = (min_lon, min_lat, max_lon, max_lat)
-
+    bbox = _parse_bbox(v, raw["bbox"], "otp.bbox") if raw.get("bbox") is not None else None
     return OtpConfig(osm_url=osm_url, bbox=bbox)
+
+
+def _parse_bbox(v: _Validator, raw: Any, path: str) -> tuple[float, float, float, float]:
+    """Parse ``[min_lon, min_lat, max_lon, max_lat]`` with min < max on both axes."""
+    values = v.sequence(raw, path)
+    if len(values) != 4:
+        v.fail(path, "expected [min_lon, min_lat, max_lon, max_lat]")
+    min_lon = v.number(values[0], f"{path}[0]", -180, 180)
+    min_lat = v.number(values[1], f"{path}[1]", -90, 90)
+    max_lon = v.number(values[2], f"{path}[2]", -180, 180)
+    max_lat = v.number(values[3], f"{path}[3]", -90, 90)
+    if min_lon >= max_lon:
+        v.fail(path, "min_lon must be less than max_lon")
+    if min_lat >= max_lat:
+        v.fail(path, "min_lat must be less than max_lat")
+    return (min_lon, min_lat, max_lon, max_lat)
+
+
+def _parse_feed_filter(v: _Validator, raw: Any, path: str) -> FeedFilter:
+    v.mapping(raw, path, required={"bbox"}, optional={"exclude_agencies"})
+    exclude_agencies = tuple(
+        v.text(agency_id, f"{path}.exclude_agencies[{i}]")
+        for i, agency_id in enumerate(
+            v.sequence(raw.get("exclude_agencies", []), f"{path}.exclude_agencies")
+        )
+    )
+    return FeedFilter(
+        bbox=_parse_bbox(v, raw["bbox"], f"{path}.bbox"),
+        exclude_agencies=exclude_agencies,
+    )
 
 
 def _parse_feeds(v: _Validator, raw: Any) -> list[Feed]:
@@ -349,12 +374,17 @@ def _parse_feeds(v: _Validator, raw: Any) -> list[Feed]:
     feeds: list[Feed] = []
     for i, item in enumerate(v.sequence(raw["gtfs_static"], "feeds.gtfs_static")):
         path = f"feeds.gtfs_static[{i}]"
-        v.mapping(item, path, required={"id", "url"})
+        v.mapping(item, path, required={"id", "url"}, optional={"filter"})
         feeds.append(
             Feed(
                 id=v.identifier(item["id"], f"{path}.id"),
                 url=v.url(item["url"], f"{path}.url", nullable=True),
                 kind="gtfs_static",
+                filter=(
+                    _parse_feed_filter(v, item["filter"], f"{path}.filter")
+                    if "filter" in item
+                    else None
+                ),
             )
         )
     for i, item in enumerate(v.sequence(raw["gtfs_rt"], "feeds.gtfs_rt")):

@@ -54,9 +54,15 @@ feeds:
     # it has been extended before then.
     - id: wkd
       url: https://mkuran.pl/gtfs/wkd.zip
-    # national rail: see #43
+    # checked 2026-11-14: national rail GTFS by mkuran.pl (PKP PLK timetables; KML, PolRegio,
+    # PKP Intercity, Koleje Śląskie...), rebuilt daily, ~26 MB, 30-day window. Cut down on
+    # import to calls inside `filter.bbox` (the extent of the ZTM and WKD feeds, rounded outwards).
     - id: rail
-      url: null
+      url: https://mkuran.pl/gtfs/polish_trains.zip
+      # SKM is excluded: it is already in the ztm feed (mkuran warsaw.zip). WKD is not in this feed.
+      filter:
+        bbox: [20.55, 51.90, 21.50, 52.52]
+        exclude_agencies: [SKM]
   gtfs_rt: []
   other:
     # checked 2026-11-14: vehicle positions from the City of Warsaw open data API. Not GTFS-RT.
@@ -104,6 +110,23 @@ attributions:
     url: https://mkuran.pl/gtfs/
     licence: CC0 1.0
     licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+  # checked 2026-11-14: reuse requires stating the source, when the data was created and
+  # retrieved, that it was processed, and informing PKP PLK about the processing.
+  - name: PKP Polskie Linie Kolejowe S.A.
+    url: https://www.plk-sa.pl/klienci-i-kontrahenci/api-otwarte-dane
+    licence: PKP PLK public sector information reuse terms
+    licence_url: https://bip.plk-sa.pl/ponowne-wykorzystywanie
+  # checked 2026-11-14: mkuran.pl asks to expose all attributions in the feed's attributions.txt
+  # (Mikołaj Kuranowski, PKP PLK, Koleje Mazowieckie).
+  - name: Mikołaj Kuranowski – Polish Trains GTFS
+    url: https://mkuran.pl/gtfs/
+    licence: Provided as is; carries PKP PLK and Koleje Mazowieckie terms
+    licence_url: https://mkuran.pl/gtfs/
+  # checked 2026-11-14: source, creation/retrieval time and processing must be stated.
+  - name: Koleje Mazowieckie – KM sp. z o.o.
+    url: https://mazowieckie.com.pl/
+    licence: Koleje Mazowieckie public sector information reuse terms
+    licence_url: https://bip.mazowieckie.com.pl/pl/ponowne-wykorzystywanie-informacji-sektora-publicznego
   # Street and map data (e.g. the OpenTripPlanner street graph).
   - name: OpenStreetMap contributors
     url: https://www.openstreetmap.org/copyright
