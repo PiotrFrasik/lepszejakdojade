@@ -20,6 +20,57 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## GTFS import and feed sources — 2026-11-14
+**Issues / PRs:** #38 (PR #44), #7 (PR: pending), #43 (new issue: national rail, split out of #7)
+**Branches:** chore/38-verify-feed-sources, feat/7-gtfs-import
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Split national rail out of #7 into #43 and retitled #7 to "Import GTFS feeds for Kraków (ZTP) and Warsaw (ZTM, WKD)". Ran feed research (#38) and the import (#7) in parallel. Forwarded verification findings to the implementing agent during its task. Read the ZTM Warszawa terms in a browser. No API contract change. | Done. |
+| data (#38) | Checked every feed URL live on 2026-11-14 (status, content type, GTFS or protobuf content). Found the Mobilis agglomeration bus feeds missing from config. Read the licences. | Done. |
+| backend (#38) | Config: Mobilis feeds, optional `licence_url` on attributions, OpenStreetMap attribution for both cities. The collector polls the Mobilis TripUpdates too. | Done. |
+| devops (#38) | `UM_WARSZAWA_API_KEY` in `.env.example` and compose (empty; used in #20). | Done. |
+| tester (#38) | Collector tests derive the Kraków feeds from config. 306 tests passing. | Passing. |
+| reviewer (#38) | Rounds: 1. | APPROVED. Two should-fix comment edits made. |
+| data (#7) | Models for static GTFS, `static_gtfs/` pipeline: conditional download, streaming CSV reader, `COPY` loader, versions, advisory lock, retention, `ANALYZE`, import report. Measured the four real feeds. | Done. |
+| backend (#7) | `import_all_gtfs` in the Celery beat schedule, read-only admin, optional settings. | Done. |
+| devops (#7) | `GTFS_IMPORT_HOUR` and `GTFS_IMPORT_MINUTE` in `.env.example`. | Done. |
+| tester (#7) | 190 tests, then 31 more after review. Backend total 508 passing. No production bugs found. | Passing. |
+| reviewer (#7) | Rounds: 2. | Round 1 CHANGES REQUESTED, fixed. Round 2 APPROVED. |
+
+**Review findings that mattered:**
+- Round 1, blocking, fixed: the rule "same sha256 as the last failed import is skipped" also skipped
+  transient failures (interrupted run, database error, time limit). One bad night could leave a city
+  stale for good. Fixed with `FeedVersion.data_error`: only data errors are remembered (see `docs/decisions.md`, entry 11).
+- Round 1, should-fix, all fixed: temp tables not qualified with `pg_temp` (an unqualified `DROP` could
+  drop a real table); stop hierarchy not enforced; no check against the active version (new versions
+  below 50% of trips or stop times are rejected, `--force` bypasses); unlock and failure recording could
+  hide the original error.
+- Round 2: the reviewer required a real-feed re-run. No skipped rows and no corrections in any of the four feeds.
+
+**Manual test (maintainer):**
+- #38: Passed. One poll showed tram 242, bus 544 and Mobilis 158 entities.
+- #7: Passed. Kraków re-imported with `--force` (versions 15 and 16 imported, old versions deleted). Admin checked.
+- Warsaw source: the maintainer kept mkuran.pl instead of the official ZTM feed (see `docs/decisions.md`, entry 12).
+
+**Problems and lessons:**
+- The path guard means `data` cannot edit city config under `backend/`. Research went to `data`, edits to `backend`.
+- `ztm.waw.pl` blocks `curl` (CloudFront 403). The coordinator read the page in the browser instead.
+- Feed size required `COPY`. The ORM `bulk_create` was too slow.
+- Parallel compose projects need unique host ports per agent. Used: gtfs7 55432, cfg38 55433, test38 55434, sched7 55435, test7 55436, fix7 55437.
+- Docs for #38 were deferred to this one entry (agreed with the maintainer), so the log keeps one entry per feature.
+
+**Follow-ups:**
+- Rebase `feat/7-gtfs-import` onto #44 to get the Mobilis feed.
+- A legitimate timetable cut of more than 50% is rejected every night until `--force`. Only a log warning; monitoring needed.
+- No check for times on the first or last stop, or for monotonic times.
+- Raw zip files are not kept; OTP (#8) needs them.
+- Stop search is not accent-insensitive (#9).
+- `StopTime` admin filter by feed version is not indexed.
+- UM Warszawa resource id not confirmed (#20). Attribution page (#25).
+- WKD feed data ends around 2026-12-12.
+- National rail (#43). The official ZTM feed includes Koleje Mazowieckie, WKD and SKM; candidate for #43.
+
 ## Bilingual support (i18n) — 2026-11-14
 **Issues / PRs:** #28 (backend), #30 (frontend) (PRs: pending)
 **Branches:** feat/28-backend-i18n, feat/30-frontend-i18n
