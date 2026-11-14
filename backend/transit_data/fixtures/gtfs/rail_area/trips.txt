@@ -1,0 +1,6 @@
+route_id,service_id,trip_id,trip_headsign,shape_id,trip_short_name
+KML_S1,WD,T_S1_1,Wieliczka Rynek,SH_S1,10001
+IC_IC,DAILY,T_IC_1,Tarnów,SH_IC,3100
+IC_IC,WE,T_IC_2,Krzeszowice,,3101
+SKM_S9,WD,T_SKM_1,Kraków Płaszów,,9001
+KML_BUS,HOL,T_BUS_1,Warszawa Centralna,SH_BUS,

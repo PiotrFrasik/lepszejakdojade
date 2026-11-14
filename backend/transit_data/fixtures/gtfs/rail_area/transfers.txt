@@ -1,0 +1,4 @@
+from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type
+KGL_2,KGL_1,T_IC_1,T_S1_1,0
+KGL_1,KRZ,T_IC_2,T_IC_2,1
+WAW,WAW,,,2

@@ -1,0 +1,4 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang
+KML,Koleje Testowe,https://rail.example.org/,Europe/Warsaw,pl
+IC,Intercity Testowy,https://ic.example.org/,Europe/Warsaw,pl
+SKM,SKM Testowa,https://skm.example.org/,Europe/Warsaw,pl

@@ -1,0 +1,10 @@
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+KGL,Kraków Główny,50.068000,19.947000,1,,
+KGL_1,Kraków Główny,50.068100,19.947200,0,KGL,1
+KGL_2,Kraków Główny,,,0,KGL,2
+KPL,Kraków Płaszów,50.036000,19.979000,0,,
+WIE,Wieliczka Rynek,49.987000,20.057000,0,,
+KRZ,Krzeszowice,50.133000,19.632000,0,,
+TAR,Tarnów,50.006000,20.975000,0,,
+WAW,Warszawa Centralna,52.229000,21.003000,0,,
+UNUSED,Kraków Bieżanów,50.020000,20.030000,0,,
