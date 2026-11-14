@@ -22,6 +22,12 @@ Shape of ``ImportReport.as_dict()``::
         "active_feed_version_id": 7, "min_share": 0.5,
         "trips": {"new": 15000, "active": 15321},
         "stop_times": {"new": 430000, "active": 439544}
+      },
+      "area_filter": {                                      # empty for unfiltered feeds
+        "config": {"bbox": [...], "exclude_agencies": ["SKM"], "min_stops_in_area": 2},
+        "files": {"trips.txt": {"read": 25714, "kept": 8412}, ...},
+        "dropped_files": [], "trips_excluded_agency": 512, "trips_outside_area": 16790,
+        "shapes_clipped": 480
       }
     }
 """
@@ -83,6 +89,9 @@ class ImportReport:
     # Size check against the active version (pipeline._check_against_active); empty when
     # there was no active version or the import was forced.
     comparison: dict = field(default_factory=dict)
+    # Area filter applied before loading (``area_filter.FilterStats.as_dict()``); empty
+    # for feeds without a ``filter`` in city config.
+    area_filter: dict = field(default_factory=dict)
 
     def file(self, name: str) -> FileStats:
         if name not in self.files:
@@ -101,6 +110,7 @@ class ImportReport:
             "warnings": list(self.warnings),
             "timings_s": {key: round(value, 2) for key, value in self.timings_s.items()},
             "comparison": dict(self.comparison),
+            "area_filter": dict(self.area_filter),
         }
 
 
@@ -121,6 +131,17 @@ def format_report(report: dict, indent: str = "  ") -> list[str]:
             lines.append(f"{indent}{indent}skipped {count}: {reason}")
         for reason, count in (stats.get("corrections") or {}).items():
             lines.append(f"{indent}{indent}corrected {count}: {reason}")
+    area_filter = report.get("area_filter") or {}
+    if area_filter:
+        config = area_filter.get("config") or {}
+        lines.append(
+            f"{indent}area filter bbox {config.get('bbox')}"
+            f" excluding agencies {config.get('exclude_agencies') or []}: kept "
+            + ", ".join(
+                f"{name.removesuffix('.txt')} {counts['kept']}/{counts['read']}"
+                for name, counts in (area_filter.get("files") or {}).items()
+            )
+        )
     if report.get("ignored_files"):
         lines.append(indent + "ignored files: " + ", ".join(report["ignored_files"]))
     for warning in report.get("warnings") or []:
