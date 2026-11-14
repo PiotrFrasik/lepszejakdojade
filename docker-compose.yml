@@ -1,5 +1,5 @@
 # Local development stack. `docker compose up` starts everything except OTP.
-# OTP needs a built graph: `docker compose --profile otp up`.
+# OTP needs a built graph: `make otp-build CITY=krakow`, then `make otp-up`.
 
 x-backend-env: &backend-env
   DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
@@ -13,7 +13,10 @@ x-backend-env: &backend-env
   POSTGRES_PORT: "5432"
   REDIS_URL: redis://redis:6379/0
   APP_VERSION: ${APP_VERSION:-dev}
-  OTP_URL: http://otp:8080
+  OTP_URL_KRAKOW: http://otp-krakow:8080
+  OTP_URL_WARSZAWA: http://otp-warszawa:8080
+  OTP_DATA_DIR: /otp/data
+  OTP_CONFIG_DIR: /otp
   GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   REALTIME_POLL_INTERVAL_SECONDS: ${REALTIME_POLL_INTERVAL_SECONDS:-30}
   UM_WARSZAWA_API_KEY: ${UM_WARSZAWA_API_KEY:-}
@@ -24,13 +27,30 @@ x-backend-base: &backend-base
   build:
     context: ./backend
   environment: *backend-env
-  volumes:
-    - ./backend:/app
+  # volumes are set per service (only backend may write to ./otp)
   depends_on:
     db:
       condition: service_healthy
     redis:
       condition: service_healthy
+
+x-otp-base: &otp-base
+  image: opentripplanner/opentripplanner:2.6.0
+  profiles: ["otp"]
+  command: ["--load", "--serve"]
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://localhost:8080/otp/actuators/health"]
+    interval: 15s
+    timeout: 5s
+    retries: 20
+    start_period: 60s
+
+x-otp-build-base: &otp-build-base
+  image: opentripplanner/opentripplanner:2.6.0
+  profiles: ["otp-build"]
+  restart: "no"
+  command: ["--build", "--save"]
 
 services:
   db:
@@ -64,6 +84,9 @@ services:
   backend:
     <<: *backend-base
     command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - ./otp:/otp
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
@@ -76,6 +99,9 @@ services:
   celery-worker:
     <<: *backend-base
     command: celery -A config worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - ./otp:/otp:ro
     depends_on:
       db:
         condition: service_healthy
@@ -87,6 +113,9 @@ services:
   celery-beat:
     <<: *backend-base
     command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app
+      - ./otp:/otp:ro
     depends_on:
       db:
         condition: service_healthy
@@ -110,17 +139,45 @@ services:
       backend:
         condition: service_healthy
 
-  otp:
-    image: opentripplanner/opentripplanner:2.6.0
-    profiles: ["otp"]
-    # Loads a prebuilt graph from ./otp/data (graph.obj, git-ignored).
-    command: ["--load", "--serve"]
-    environment:
-      JAVA_TOOL_OPTIONS: ${OTP_JAVA_OPTS:--Xmx2G}
+  # --- OpenTripPlanner, one instance per city (profile "otp") ---
+  # Each serves a prebuilt graph from ./otp/data/<city>/graph.obj (ignored by version control).
+  # Prepare inputs and build the graph with `make otp-build CITY=<city>`.
+  # The image entrypoint reads JAVA_OPTS (not JAVA_TOOL_OPTIONS).
+  otp-krakow:
+    <<: *otp-base
     ports:
-      - "127.0.0.1:${OTP_PORT:-8080}:8080"
+      - "127.0.0.1:${OTP_KRAKOW_PORT:-8080}:8080"
+    environment:
+      JAVA_OPTS: ${OTP_KRAKOW_SERVE_JAVA_OPTS:--Xmx2G}
     volumes:
-      - ./otp/data:/var/opentripplanner
+      - ./otp/data/krakow:/var/opentripplanner
+
+  otp-warszawa:
+    <<: *otp-base
+    ports:
+      - "127.0.0.1:${OTP_WARSZAWA_PORT:-8081}:8080"
+    environment:
+      JAVA_OPTS: ${OTP_WARSZAWA_SERVE_JAVA_OPTS:--Xmx3G}
+    volumes:
+      - ./otp/data/warszawa:/var/opentripplanner
+
+  # --- One-shot graph builds (profile "otp-build") ---
+  # Run with `docker compose run --rm otp-build-<city>` (or `make otp-build CITY=<city>`).
+  # Measured peak RSS: Krakow build ~3.5 GB, Warsaw build ~7.4 GB. Run ONE city at a
+  # time; building both in parallel needs more memory than a typical Docker VM has.
+  otp-build-krakow:
+    <<: *otp-build-base
+    environment:
+      JAVA_OPTS: ${OTP_KRAKOW_BUILD_JAVA_OPTS:--Xmx4G}
+    volumes:
+      - ./otp/data/krakow:/var/opentripplanner
+
+  otp-build-warszawa:
+    <<: *otp-build-base
+    environment:
+      JAVA_OPTS: ${OTP_WARSZAWA_BUILD_JAVA_OPTS:--Xmx7G}
+    volumes:
+      - ./otp/data/warszawa:/var/opentripplanner
 
 volumes:
   pgdata:
