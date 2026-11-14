@@ -8,7 +8,9 @@ OTP 2 serves one graph per instance, so every city gets its own directory
   ``<OTP_CONFIG_DIR>/<city>/``, plus the city-specific parts generated from city config
   (feed list, OSM file, time zone);
 - ``<feed id>.gtfs.zip`` for every static GTFS feed with a URL (feeds with ``url: null``
-  are skipped);
+  are skipped); a feed with a ``filter`` in city config is downloaded to
+  ``cache/<feed id>.source.gtfs.zip`` and cut down to the city's area first
+  (``static_gtfs.area_filter``, the same filter as the database import);
 - ``<city>.osm.pbf``: the regional OSM extract (``city.otp.osm_url``) clipped with
   osmium-tool to the area served by the feeds (bbox of all GTFS stops plus a buffer, or the
   ``city.otp.bbox`` override);
@@ -54,7 +56,14 @@ from typing import Any
 from django.conf import settings
 
 from cities.registry import City, get_city
+from transit_data.static_gtfs.area_filter import (
+    AreaFilter,
+    AreaFilterError,
+    feed_area_filter,
+    filter_feed,
+)
 from transit_data.static_gtfs.download import DownloadError, download_feed
+from transit_data.static_gtfs.reader import GtfsFormatError, GtfsSource
 
 CONFIG_FILES = ("build-config.json", "router-config.json", "otp-config.json")
 SHARED_CONFIG_SUBDIR = "config"
@@ -606,15 +615,36 @@ def _prepare_locked(
     # 1. GTFS feeds (they also define the area to clip).
     for feed in feeds:
         target = directory / f"{feed.id}{GTFS_SUFFIX}"
-        result = fetch(feed.url, target, cache / f"{feed.id}.json", validate_gtfs_zip, force)
+        try:
+            area = feed_area_filter(feed)
+        except AreaFilterError as exc:
+            raise PrepareError(f"{feed.id}: invalid filter in city config: {exc}") from exc
+        # A filtered feed is downloaded into the cache and cut down to the city's area
+        # (the same filter as the database import), so OTP never sees the whole feed.
+        # The two paths keep separate download metadata, so neither trusts the other's
+        # ETag for a file it did not write.
+        plain_meta = cache / f"{feed.id}.json"
+        source_zip = cache / f"{feed.id}.source{GTFS_SUFFIX}"
+        source_meta = cache / f"{feed.id}.source.json"
+        filter_stamp = cache / f"{feed.id}.filter.json"
+        if area is None:
+            if filter_stamp.exists():
+                # The filter was removed: the current file is a filtered one, not the feed.
+                for stale in (target, filter_stamp, source_zip, source_meta, plain_meta):
+                    stale.unlink(missing_ok=True)
+            download_target, meta_path = target, plain_meta
+        else:
+            plain_meta.unlink(missing_ok=True)
+            download_target, meta_path = source_zip, source_meta
+        result = fetch(feed.url, download_target, meta_path, validate_gtfs_zip, force)
         if result.error:
             report.warnings.append(
                 f"{feed.id}: download failed, kept previous file: {result.error}"
             )
-        report.feeds.append(
-            {"id": feed.id, "file": target.name, "status": result.status, **result.meta}
-            | ({"error": result.error} if result.error else {})
-        )
+        entry = {"id": feed.id, "file": target.name, "status": result.status, **result.meta}
+        if area is not None:
+            entry["area_filter"] = _filter_if_changed(download_target, target, area, filter_stamp)
+        report.feeds.append(entry | ({"error": result.error} if result.error else {}))
     wanted = {f"{feed.id}{GTFS_SUFFIX}" for feed in feeds}
     for stale in sorted(directory.glob(f"*{GTFS_SUFFIX}")):
         if stale.name not in wanted:
@@ -706,6 +736,35 @@ def _clip_if_changed(source: Path, target: Path, bbox: BBox, stamp_path: Path) -
             pass
     clip_osm(source, target, bbox)
     stamp_path.write_text(json.dumps(stamp), encoding="utf-8")
+
+
+def _filter_if_changed(source: Path, target: Path, area: AreaFilter, stamp_path: Path) -> dict:
+    """Write the area-filtered feed unless the same source was already filtered with the
+    same filter. Returns the filter statistics (stored in the stamp file)."""
+    stamp = _source_stamp(source) | {"filter": area.as_dict()}
+    if target.exists() and stamp_path.exists():
+        try:
+            stored = json.loads(stamp_path.read_text(encoding="utf-8"))
+            if stored.get("stamp") == stamp:
+                return stored.get("stats") or {}
+        except (OSError, ValueError, AttributeError):
+            pass
+    part = target.with_name(target.name + ".part")
+    try:
+        # Same unpacked-size limit as the database import, checked before filtering.
+        GtfsSource(
+            source,
+            max_uncompressed_bytes=getattr(
+                settings, "TRANSIT_GTFS_MAX_UNCOMPRESSED_BYTES", 5 * 1024 * 1024 * 1024
+            ),
+        ).close()
+        stats = filter_feed(source, part, area).as_dict()
+    except (AreaFilterError, GtfsFormatError, OSError, zipfile.BadZipFile) as exc:
+        part.unlink(missing_ok=True)
+        raise PrepareError(f"cannot filter {source.name}: {exc}") from exc
+    os.replace(part, target)
+    stamp_path.write_text(json.dumps({"stamp": stamp, "stats": stats}), encoding="utf-8")
+    return stats
 
 
 def _copy_if_changed(source: Path, target: Path) -> None:
