@@ -20,6 +20,39 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Kraków realtime collector — 2026-11-14
+**Issues / PRs:** #6 (PR: pending)
+**Branches:** feat/6-krakow-realtime-collector
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Chose #6 over i18n (#28, #30) to start collecting data early, because statistics need weeks of data. No API contract change. Removed a stale agent folder from an earlier session (one empty directory, locked by a process). | Done. |
+| data (#6) | New `transit_data` app: Celery beat task, GTFS-RT download and parse, `StopEvent` and `FeedFetch` models, `collect_trip_updates` command. Recorded real `.pb` fixtures and checked the collector live in a scratch compose project. Found and fixed a bug where an empty HTTP body was logged as `ok`. | Done. |
+| backend (#6) | Wiring: requirements, `INSTALLED_APPS`, `CELERY_BEAT_SCHEDULE`. Existing tests: 80 passing. | Done. |
+| devops (#6) | `.env.example` and compose: `REALTIME_POLL_INTERVAL_SECONDS`. | Done. |
+| tester (#6) | Round 1: 77 new tests. Round 2: 42 more. Backend total 217 passing, ruff clean. | Passing. No production bugs found. |
+| reviewer (#6) | Rounds: 2. | Round 1 APPROVED with 3 should-fix, 2 fixed and 1 deferred. Round 2 APPROVED. |
+
+**Review findings that mattered:**
+- Round 1, fixed: the inferred service date flipped in the middle of a trip across 03:00. Fixed with the 4-hour memory of the stored date (see `docs/decisions.md`, entry 4).
+- Round 1, fixed: one bad value rolled back the whole poll. Now only the affected entity or stop update is skipped (see `docs/decisions.md`, entry 5).
+- Round 1, deferred by the maintainer to #22: table bloat from daytime upserts.
+
+**Manual test (maintainer):** Approved. Stack run from the worktree. Data was visible in the admin, new fetches arrived about every 30 s, and the first poll stored about 10.8k events. Follow-up after the test: the command output showed UTC while the logs showed local time. Fixed after the test.
+
+**Problems and lessons:**
+- PowerShell 5 does not support `&&`. Give Piotr PowerShell instructions one command per block.
+- Port 5432 was blocked by Windows again. The worktree stack needed `DB_PORT=55432`. Consider making a non-default `DB_PORT` the documented default.
+- Collection runs only while the local stack is up. Long-running collection needs a server (not decided yet).
+- Agents created 0-byte bind-mount files in `backend/config/settings/` during verification. Check `git status` before each commit.
+- The session paused overnight in the middle of an agent run. It was resumed by messaging the same agent.
+
+**Follow-ups:**
+- Table bloat and the deletion job for raw events: #22.
+- A feed without a header timestamp is never marked `unchanged` or `stale`. A body-hash fallback is needed.
+- A floor for `REALTIME_POLL_INTERVAL_SECONDS` is not set yet.
+- Hosting for continuous collection: to discuss.
+
 ## CI workflow — 2026-11-11
 **Issues / PRs:** #4 (PR: pending)
 **Branches:** ci/4-github-actions

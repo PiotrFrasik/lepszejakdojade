@@ -2,7 +2,8 @@
 
 Public transport web app for Kraków and Warsaw. It is in early development: the foundation
 (containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
-Journey planning, timetables, tickets, live data and the AI assistant are planned.
+A realtime collector for Kraków trip updates has started and stores data in the database.
+Journey planning, timetables, tickets, live departures and the AI assistant are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -60,6 +61,36 @@ City configuration lives in `backend/cities/config/<id>.yaml`, one file per city
 - Public fields are exposed via `GET /api/v1/cities/`. Internal fields (feeds, ticket zones,
   attributions) are not exposed.
 
+## Realtime data collector
+
+A Celery beat task, `transit_data.collect_trip_updates`, polls the GTFS-Realtime trip update
+feeds of each city every `REALTIME_POLL_INTERVAL_SECONDS` (default 30). It runs in the
+`celery-worker` and `celery-beat` services, so `docker compose up -d` starts it.
+
+- Feeds come from each city's `gtfs_rt` list in its config file, where `entity: trip_updates`.
+  For Kraków these are `ztp_tram_trip_updates` and `ztp_bus_trip_updates`.
+- Every poll writes one `FeedFetch` row per feed (status, error, skipped count). Stop visits go to
+  `StopEvent`, one row per trip and stop.
+- Check the data in the Django admin at http://localhost:8000/admin/. Create a login first:
+  `docker compose exec backend python manage.py createsuperuser`. Both models are read-only there.
+- Run one poll by hand, or several, with the management command:
+
+  ```bash
+  docker compose exec backend python manage.py collect_trip_updates --city krakow
+  docker compose exec backend python manage.py collect_trip_updates --city krakow --feed ztp_bus_trip_updates
+  docker compose exec backend python manage.py collect_trip_updates --loop 30 --count 10
+  docker compose exec backend python manage.py collect_trip_updates --dump-dir /tmp/feeds
+  ```
+
+  `--dump-dir` saves each downloaded feed as a `.pb` file, for tests.
+- Optional Django settings with their defaults: `TRANSIT_REALTIME_HTTP_TIMEOUT` (10 s),
+  `TRANSIT_REALTIME_STALE_AFTER` (300 s), `TRANSIT_REALTIME_MAX_BYTES` (20 MB). They are not in
+  `.env.example`; set them in the settings file if needed.
+
+What the data looks like and what is missing is in [docs/architecture.md](docs/architecture.md).
+Short version: tram messages have no delays until the static GTFS import (#7) is built. Raw
+events are meant to be kept for 60 days; the deletion job comes with #22 and is not built yet.
+
 ## Tests
 
 ```bash
@@ -92,17 +123,22 @@ not secrets.
   `docker compose up -d --build -V`.
 - An old `backend/.pytest_cache` directory owned by root (created by earlier container runs)
   can be deleted from the host.
+- If Windows blocks port 5432 on the host, set
+  `DB_PORT=55432` in `.env` and run `docker compose up -d` again. Only the host port changes; the
+  containers still use 5432 inside the Docker network.
 
 ## Known limitations
 
 - Map tiles are loaded directly from `tile.openstreetmap.org`. This follows the OSM tile usage
   policy and is fine for development, but not for production traffic. A tile provider must be
   chosen before deployment.
+- The realtime collector runs only while the local stack is up. Continuous collection needs a
+  server; hosting is not decided yet.
 
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/, cities/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log
@@ -113,6 +149,7 @@ docker-compose.yml, Makefile, .env.example
 
 - [docs/concept.md](docs/concept.md): product concept
 - [docs/api.md](docs/api.md): API contract (the live Swagger UI is linked above)
+- [docs/architecture.md](docs/architecture.md): services, data flow and retention
 - [docs/backlog.md](docs/backlog.md): planned work
 - [docs/decisions.md](docs/decisions.md): short decision records
 - [docs/ai-workflow/log.md](docs/ai-workflow/log.md): log of features built with AI agents

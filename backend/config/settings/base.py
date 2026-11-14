@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # Local
     "core",
     "cities",
+    "transit_data",
 ]
 
 MIDDLEWARE = [
@@ -171,5 +172,16 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
+# Realtime collector (transit_data)
+REALTIME_POLL_INTERVAL_SECONDS = float(env_str("REALTIME_POLL_INTERVAL_SECONDS", "30"))
+CELERY_BEAT_SCHEDULE = {
+    "collect-trip-updates": {
+        "task": "transit_data.collect_trip_updates",
+        "schedule": REALTIME_POLL_INTERVAL_SECONDS,
+        # Drop runs that waited longer than one interval instead of piling them up.
+        "options": {"expires": REALTIME_POLL_INTERVAL_SECONDS},
     },
 }
