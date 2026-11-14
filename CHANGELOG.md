@@ -44,8 +44,20 @@ Entries are written from Conventional Commit messages.
   `OTP_OSMIUM_BIN`, `OTP_BBOX_BUFFER_KM`, `OTP_OSM_MAX_BYTES`, `OTP_OSM_DOWNLOAD_MAX_SECONDS`, and the
   per-city heap and port settings (#46, #47).
 - `osmium-tool` in the backend image (#47).
+- National rail GTFS (#43): the mkuran.pl "Polish Trains" feed (`rail`) for both cities, cut to each
+  city's area at import. Warsaw leaves out SKM, which the `ztm` feed already has.
+- Optional `filter` on `gtfs_static` feeds in the city config: `bbox` and `exclude_agencies`. The
+  import keeps trips with at least two calls in the box, cuts them to those calls, and drops unused
+  routes, agencies, services and shapes.
+- Stops without usable coordinates inherit the position of their nearest positioned parent. The
+  import report counts them as corrections. Orphans are still skipped (#43).
+- Attributions for PKP PLK, Mikołaj Kuranowski (Polish Trains GTFS) and Koleje Mazowieckie in both
+  city configs (#43).
 
 ### Changed
 
 - `OTP_URL` is replaced by `OTP_URL_KRAKOW` and `OTP_URL_WARSZAWA`, one per city.
 - Celery worker and beat mount `./otp` read-only; the backend mounts it read-write (#47).
+- OTP input prep uses the cut feed for a `gtfs_static` feed with a `filter`, and caches the source
+  and cut zips. The unpacked-size limit applies to the OTP path as well as the import (#43).
+- The backend CI job installs `osmium-tool`, so the real OSM clip test runs instead of skipping (#53).
