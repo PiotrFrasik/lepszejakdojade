@@ -9,6 +9,7 @@ until ``clear_cache()`` is called or ``CITY_CONFIG_DIR`` changes.
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ GTFS_RT_ENTITIES = ("vehicle_positions", "trip_updates", "service_alerts")
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 _COLOUR_RE = re.compile(r"^#[0-9a-f]{6}$")
 _URL_RE = re.compile(r"^https?://\S+$")
+_HTTPS_URL_RE = re.compile(r"^https://\S+$")
 
 
 class CityConfigError(ImproperlyConfigured):
@@ -95,6 +97,14 @@ class Attribution:
 
 
 @dataclass(frozen=True)
+class OtpConfig:
+    """OpenTripPlanner graph build settings (internal)."""
+
+    osm_url: str  # OpenStreetMap extract (.osm.pbf)
+    bbox: tuple[float, float, float, float] | None  # (min_lon, min_lat, max_lon, max_lat)
+
+
+@dataclass(frozen=True)
 class City:
     id: str
     names: Translated
@@ -107,6 +117,7 @@ class City:
     feeds: tuple[Feed, ...]
     ticket_zones: tuple[TicketZone, ...]
     attributions: tuple[Attribution, ...]
+    otp: OtpConfig | None = None  # None when the city has no `otp` section
 
     @property
     def name(self) -> str:
@@ -209,12 +220,13 @@ _TOP_LEVEL_KEYS = {
     "ticket_zones",
     "attributions",
 }
+_OPTIONAL_TOP_LEVEL_KEYS = {"otp"}
 
 
 def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
     """Validate raw config data and build a City. Raises CityConfigError."""
     v = _Validator(source)
-    v.mapping(data, "<root>", required=_TOP_LEVEL_KEYS)
+    v.mapping(data, "<root>", required=_TOP_LEVEL_KEYS, optional=_OPTIONAL_TOP_LEVEL_KEYS)
 
     city_id = v.identifier(data["id"], "id")
     if expected_id is not None and city_id != expected_id:
@@ -304,7 +316,32 @@ def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
         feeds=tuple(feeds),
         ticket_zones=tuple(ticket_zones),
         attributions=tuple(attributions),
+        otp=_parse_otp(v, data["otp"]) if "otp" in data else None,
     )
+
+
+def _parse_otp(v: _Validator, raw: Any) -> OtpConfig:
+    v.mapping(raw, "otp", required={"osm_url"}, optional={"bbox"})
+    osm_url = raw["osm_url"]
+    if not isinstance(osm_url, str) or not _HTTPS_URL_RE.match(osm_url):
+        v.fail("otp.osm_url", "expected an https URL")
+
+    bbox = None
+    if raw.get("bbox") is not None:
+        values = v.sequence(raw["bbox"], "otp.bbox")
+        if len(values) != 4:
+            v.fail("otp.bbox", "expected [min_lon, min_lat, max_lon, max_lat]")
+        min_lon = v.number(values[0], "otp.bbox[0]", -180, 180)
+        min_lat = v.number(values[1], "otp.bbox[1]", -90, 90)
+        max_lon = v.number(values[2], "otp.bbox[2]", -180, 180)
+        max_lat = v.number(values[3], "otp.bbox[3]", -90, 90)
+        if min_lon >= max_lon:
+            v.fail("otp.bbox", "min_lon must be less than max_lon")
+        if min_lat >= max_lat:
+            v.fail("otp.bbox", "min_lat must be less than max_lat")
+        bbox = (min_lon, min_lat, max_lon, max_lat)
+
+    return OtpConfig(osm_url=osm_url, bbox=bbox)
 
 
 def _parse_feeds(v: _Validator, raw: Any) -> list[Feed]:
@@ -398,6 +435,16 @@ def all_cities() -> list[City]:
 
 def get_city(city_id: str) -> City | None:
     return _registry().get(city_id)
+
+
+def get_otp_url(city_id: str) -> str | None:
+    """Base URL of the city's OpenTripPlanner instance, or None if it is not configured.
+
+    Read from the environment variable ``OTP_URL_<CITY_ID>``: the city id upper-cased, with
+    ``-`` replaced by ``_`` (e.g. ``OTP_URL_KRAKOW``). Unset or blank means None.
+    """
+    name = "OTP_URL_" + city_id.upper().replace("-", "_")
+    return os.environ.get(name, "").strip() or None
 
 
 @receiver(setting_changed)
