@@ -91,6 +91,7 @@ class Attribution:
     name: str
     url: str
     licence: str | None
+    licence_url: str | None = None  # link to the licence or terms of use
 
 
 @dataclass(frozen=True)
@@ -279,7 +280,7 @@ def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
     attributions = []
     for i, raw in enumerate(v.sequence(data["attributions"], "attributions", allow_empty=False)):
         path = f"attributions[{i}]"
-        v.mapping(raw, path, required={"name", "url", "licence"})
+        v.mapping(raw, path, required={"name", "url", "licence"}, optional={"licence_url"})
         licence = raw["licence"]
         if licence is not None:
             v.text(licence, f"{path}.licence")
@@ -288,6 +289,7 @@ def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
                 name=v.text(raw["name"], f"{path}.name"),
                 url=v.url(raw["url"], f"{path}.url"),
                 licence=licence,
+                licence_url=v.url(raw.get("licence_url"), f"{path}.licence_url", nullable=True),
             )
         )
 

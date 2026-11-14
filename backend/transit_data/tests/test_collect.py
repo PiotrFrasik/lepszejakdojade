@@ -18,6 +18,7 @@ from .conftest import (
     TESTVILLE_URL,
     epoch,
     get_feed,
+    krakow_trip_update_urls,
     make_message,
 )
 
@@ -490,27 +491,28 @@ def test_collects_every_city_with_trip_updates_feeds(served, clock, city_config)
     body = make_message(
         [trip([{"stop_id": "A", "seq": 1, "arr": (t, 0)}])], epoch(2026, 11, 10, 12)
     )
-    served[BUS_URL] = body
-    served[TRAM_URL] = body
+    krakow = krakow_trip_update_urls()
+    for url in krakow.values():
+        served[url] = body
     served[TESTVILLE_URL] = body
 
     logs = collect_all_trip_updates()
 
-    assert sorted(served.requested) == sorted([BUS_URL, TRAM_URL, TESTVILLE_URL])
+    assert {KRAKOW_BUS_FEED, KRAKOW_TRAM_FEED} <= set(krakow)
+    assert sorted(served.requested) == sorted([*krakow.values(), TESTVILLE_URL])
     assert {(log.city_id, log.feed_id) for log in logs} == {
-        ("krakow", KRAKOW_BUS_FEED),
-        ("krakow", KRAKOW_TRAM_FEED),
+        *(("krakow", feed_id) for feed_id in krakow),
         ("testville", "tv_trip_updates"),
     }
     assert all(log.status == "ok" for log in logs)
-    # Same trip id in three feeds/cities: stored separately.
-    assert StopEvent.objects.count() == 3
+    # Same trip id in every feed/city: stored separately.
+    assert StopEvent.objects.count() == len(krakow) + 1
     assert set(StopEvent.objects.values_list("city_id", flat=True)) == {"krakow", "testville"}
 
 
 def test_city_without_trip_updates_feed_is_ignored(served, clock, city_config):
-    served[BUS_URL] = b""
-    served[TRAM_URL] = b""
+    for url in krakow_trip_update_urls().values():
+        served[url] = b""
     served[TESTVILLE_URL] = b""
     collect_all_trip_updates()
     assert not [u for u in served.requested if "warszawa" in u or "um.warszawa" in u]
@@ -518,14 +520,19 @@ def test_city_without_trip_updates_feed_is_ignored(served, clock, city_config):
 
 
 def test_vehicle_position_and_url_less_feeds_are_not_polled(served, clock, city_config):
-    served[BUS_URL] = served[TRAM_URL] = served[TESTVILLE_URL] = b""
+    krakow = krakow_trip_update_urls()
+    for url in krakow.values():
+        served[url] = b""
+    served[TESTVILLE_URL] = b""
     collect_all_trip_updates()
     assert "http://testville.invalid/Vehicles.pb" not in served.requested
-    assert len(served.requested) == 3
+    assert sorted(served.requested) == sorted([*krakow.values(), TESTVILLE_URL])
 
 
 def test_filters_by_city_and_feed(served, clock, city_config):
-    served[BUS_URL] = served[TRAM_URL] = served[TESTVILLE_URL] = b""
+    for url in krakow_trip_update_urls().values():
+        served[url] = b""
+    served[TESTVILLE_URL] = b""
 
     collect_all_trip_updates(city_id="testville")
     assert served.requested == [TESTVILLE_URL]
@@ -542,8 +549,10 @@ def test_filters_by_city_and_feed(served, clock, city_config):
 
 def test_one_failing_feed_does_not_stop_the_others(served, clock, city_config):
     t = epoch(2026, 11, 10, 12, 5)
+    krakow = krakow_trip_update_urls()
+    for url in krakow.values():
+        served[url] = b"garbage \xff"
     served[BUS_URL] = FetchError(FeedFetch.Status.HTTP_ERROR, "HTTP 500", 500)
-    served[TRAM_URL] = b"garbage \xff"
     served[TESTVILLE_URL] = make_message(
         [trip([{"stop_id": "A", "arr": (t, 0)}])], epoch(2026, 11, 10, 12)
     )
@@ -551,8 +560,8 @@ def test_one_failing_feed_does_not_stop_the_others(served, clock, city_config):
     logs = collect_all_trip_updates()
 
     assert {log.feed_id: log.status for log in logs} == {
+        **dict.fromkeys(krakow, "parse_error"),
         KRAKOW_BUS_FEED: "http_error",
-        KRAKOW_TRAM_FEED: "parse_error",
         "tv_trip_updates": "ok",
     }
     assert StopEvent.objects.filter(city_id="testville").count() == 1
