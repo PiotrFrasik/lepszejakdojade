@@ -24,7 +24,7 @@ flowchart LR
 
     gemini["Google Gemini API<br/>(planned, #18)"]
     ztp["ZTP Kraków<br/>GTFS-RT TripUpdates<br/>tram, bus, Mobilis bus (#38)"]
-    gtfs["GTFS static feeds<br/>ZTP Kraków, mkuran.pl (Warsaw, WKD)"]
+    gtfs["GTFS static feeds<br/>ZTP Kraków, mkuran.pl (Warsaw ZTM, WKD, national rail)"]
     osm["Geofabrik OSM extracts<br/>małopolskie, mazowieckie"]
 
     user --> fe
@@ -57,7 +57,7 @@ flowchart LR
 | OSM extracts | Geofabrik, external | Regional extracts for Małopolska and Mazowsze. `prepare_otp_inputs` clips them with `osmium-tool`, which is installed in the backend image (#8) |
 | Gemini | external | Planned (#18). Behind a provider interface |
 | ZTP Kraków feeds | external | Read by the realtime collector |
-| GTFS static feeds | external | Imported nightly by `celery-worker` (#7). Kraków: ZTP. Warsaw: mkuran.pl (ZTM data). WKD: mkuran.pl |
+| GTFS static feeds | external | Imported nightly by `celery-worker` (#7). Kraków: ZTP. Warsaw: mkuran.pl (ZTM data). WKD: mkuran.pl. National rail: mkuran.pl "Polish Trains", one feed cut per city (#43) |
 
 ## Data flow
 
@@ -152,6 +152,7 @@ sequenceDiagram
             alt not modified, or same sha256 as the last failed data error
                 W->>P: report unchanged or skipped
             else new archive
+                W->>W: area filter (feeds with a filter only), cut to the city area
                 W->>W: stream CSV files, skip or correct bad rows
                 W->>P: COPY rows into a new FeedVersion
                 W->>P: check size against active version, switch active (one transaction), ANALYZE
@@ -180,6 +181,16 @@ Rules the importer follows:
 - **Report.** Each run stores counts, skipped rows, corrections, ignored files and a comparison with
   the active version as JSON on `FeedVersion.report`.
 - **Times.** Stored as seconds since midnight of the service day. Values above 24:00 are allowed.
+- **Area filter (optional, per feed).** A `gtfs_static` feed can have a `filter` in its city config:
+  `bbox` (`[min_lon, min_lat, max_lon, max_lat]`) and optional `exclude_agencies` (agency ids).
+  - A trip is kept only if at least two of its calls are inside the box. Kept trips are cut to their
+    inside calls; the first and last calls are always timed. Headsigns are not changed.
+  - A trip that leaves and re-enters the box is joined directly between its inside calls.
+  - Unused routes, agencies, services and shapes are dropped. Shapes are clipped by
+    `shape_dist_traveled`. `agency.txt` is kept whole for single-agency feeds.
+  - The output is deterministic.
+  - Changing a `filter` forces a re-import. If the filter fails or leaves no data, the version is
+    failed and the active version stays.
 - **Calendar.** `calendar.txt` is optional when `calendar_dates.txt` exists.
 
 Measured on the real feeds during #7 testing (local stack):
@@ -195,6 +206,15 @@ About 90,000 stop times per second, 210 MB peak memory. The database was about 3
 active and one previous version of all feeds. A departures query for one stop on one date took
 6.9 ms; a trigram name search took 0.4 ms (measured on the same data).
 
+National rail (`rail`, one feed, cut per city, measured on the real feed in #43):
+
+| City | Stops | Routes | Trips | Agencies | Import time |
+|---|---|---|---|---|---|
+| Kraków | 248 | 30 | 1,721 | 4 (KML, PR, IC, KS) | about 11 s |
+| Warsaw | 447 | 42 | 8,412 | no SKM (SKM is in `ztm`) | not recorded |
+
+Re-import gives the same result.
+
 Limits (not built yet): no check for times on the first or last stop, and no check that times rise
 monotonically. The importer does not keep the zip files; the OTP inputs step (#8) downloads its own
 copies (see below).
@@ -205,8 +225,9 @@ OTP 2 serves one graph per instance, so each city has its own OTP service and gr
 ([decision 14](decisions.md#14-one-opentripplanner-instance-per-city)). A graph is made in three steps:
 
 1. **Prepare inputs.** `manage.py prepare_otp_inputs --city <city>` runs in the backend container.
-   It downloads the city's `gtfs_static` feeds that have a URL (national rail is skipped until #43)
-   and the Geofabrik regional OSM extract. It clips the extract with
+   It downloads the city's `gtfs_static` feeds that have a URL and the Geofabrik regional OSM extract.
+   A feed with a `filter` is cut to the city's area (see Static GTFS import), so national rail is
+   part of the graph once the graph is rebuilt (#43). It clips the extract with
    `osmium extract --strategy complete_ways` to the bbox of all GTFS stops plus 3 km
    ([decision 15](decisions.md#15-clip-the-osm-extract-with-the-osmium-tool-cli-in-the-backend-image)).
    It writes the city's OTP config and `prepare-report.json`.
@@ -235,6 +256,10 @@ Rules the steps follow:
 - **City config section.** New internal section `otp` in `backend/cities/config/<id>.yaml`:
   `osm_url` (https, required) and `bbox` (`[min_lon, min_lat, max_lon, max_lat]`, optional; `null`
   means absent). It is never returned by the API.
+- **Filtered feeds.** For a feed with a `filter`, the prepare keeps the source zip and its metadata
+  (`cache/<id>.source.gtfs.zip`, `cache/<id>.source.json`) and writes the cut zip as `<id>.gtfs.zip`.
+  `cache/<id>.filter.json` is the stamp for the filter. Removing a `filter` cleans up these files
+  and downloads the full feed again. The unpacked-size limit applies on both the import and the OTP path.
 - **Downloads** are conditional. A failed download keeps the previous file. GTFS uses
   `TRANSIT_GTFS_MAX_BYTES` and `TRANSIT_GTFS_DOWNLOAD_MAX_SECONDS`. The OSM extract uses
   `OTP_OSM_MAX_BYTES` and `OTP_OSM_DOWNLOAD_MAX_SECONDS`.
@@ -303,7 +328,7 @@ backend returns text or cards. Rate limits apply per user.
 | `StopEvent` (raw realtime) | Kept 60 days (`RAW_EVENT_RETENTION_DAYS`) | Deletion job not built yet; comes with #22 |
 | `FeedFetch` (one row per poll) | About 2,880 rows per feed per day at a 30 s interval | No retention rule yet |
 | Static GTFS versions (`FeedVersion` and its rows) | Active, one superseded, last 5 failed versions per feed (see above) | Built (#7) |
-| OTP inputs and graph (`otp/data/<city>/`: GTFS zips, clipped and unclipped OSM extract, `graph.obj`) | Overwritten by each prepare and build; no history | Built (#8). Git-ignored |
+| OTP inputs and graph (`otp/data/<city>/`: GTFS zips, clipped and unclipped OSM extract, `graph.obj`, and `cache/` with source and cut zips of feeds with a `filter`) | Overwritten by each prepare and build; no history | Built (#8, filtered feeds #43). Git-ignored |
 | Nightly statistics | Planned (#22) | Not built |
 
 ## Operating the collector
@@ -322,6 +347,9 @@ backend returns text or cards. Rate limits apply per user.
   warning appears 14 days before the end of service.
 - Warsaw uses the mkuran.pl feed. A single maintainer runs it; the official ZTM feed is the fallback
   (see `docs/decisions.md`, entry 12).
+- National rail (`rail`) is one feed for both cities. Each city has its own `filter`. The feed covers
+  30 days and mkuran.pl rebuilds it daily. Load it with `manage.py import_gtfs <city> --feed rail`
+  (see `docs/decisions.md`, entry 18).
 
 ## Operating the OTP graphs
 
@@ -330,6 +358,8 @@ backend returns text or cards. Rate limits apply per user.
   ([decision 17](decisions.md#17-graph-rebuild-is-manual-for-now)).
 - The `make` build target restarts the city's service if it is running. While it restarts, that
   city's OTP does not answer.
+- Graphs built before the rail feed was added have no national rail. Rebuild each city to include it.
+  Build time and memory with rail are not measured yet (#51).
 - Measured peak memory: Warsaw build 7.4 GB RSS, Kraków build 3.5 GB RSS. Docker was given 12 GB.
 - The bicycle transfers are left out on purpose ([decision 16](decisions.md#16-no-bicycle-transfers-in-the-transfer-pre-computation)).
 - Each prepare writes `prepare-report.json` in `otp/data/<city>/`. Check its warnings after a

@@ -31,6 +31,16 @@ the time zone are added by `prepare_otp_inputs` from `backend/cities/config/<cit
 (`feeds.gtfs_static`, `timezone`, `otp.osm_url`, optional `otp.bbox`). Feeds with
 `url: null` are skipped.
 
+A feed with a `filter` (the national rail feed `rail`) is downloaded to
+`cache/<feed id>.source.gtfs.zip` and cut down to the filter's bbox (and without its
+`exclude_agencies`) before it is written as `<feed id>.gtfs.zip`, with the same code as the
+database import (`backend/transit_data/static_gtfs/area_filter.py`). Trips are clipped to
+their calls inside the bbox, so the stops bbox used for clipping the OSM extract does not
+grow to the whole country. The filtered file is rewritten only when the source file or the
+filter changes (`cache/<feed id>.filter.json`; download metadata in
+`cache/<feed id>.source.json`). When a filter is removed, the filtered file and its cache
+entries are deleted and the full feed is downloaded again.
+
 ## Rebuilding a graph
 
 1. Prepare the inputs (downloads are conditional, failed downloads keep the previous file):

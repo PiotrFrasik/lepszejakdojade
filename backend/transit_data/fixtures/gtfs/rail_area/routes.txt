@@ -1,0 +1,5 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+KML_S1,KML,S1,Kraków Główny – Wieliczka Rynek,2,1F6FEB,FFFFFF
+IC_IC,IC,IC,Intercity,2,,
+SKM_S9,SKM,S9,SKM S9,2,,
+KML_BUS,KML,ZKA,Zastępcza komunikacja autobusowa,3,,

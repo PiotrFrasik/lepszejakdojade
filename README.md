@@ -99,6 +99,8 @@ City configuration lives in `backend/cities/config/<id>.yaml`, one file per city
 - Optional: set `CITY_CONFIG_DIR` in `.env` to load city files from another directory.
 - Public fields are exposed via `GET /api/v1/cities/`. Internal fields (feeds, ticket zones,
   attributions) are not exposed.
+- A `gtfs_static` feed can have an optional `filter` (`bbox`, `exclude_agencies`). The import cuts
+  the feed to the city's area. See [docs/architecture.md](docs/architecture.md).
 
 ## Realtime data collector
 
@@ -137,8 +139,10 @@ with #22 and is not built yet.
 A nightly Celery beat task, `transit_data.import_all_gtfs`, imports the `gtfs_static` feeds of each
 city at `GTFS_IMPORT_HOUR`:`GTFS_IMPORT_MINUTE` (default 03:30, Europe/Warsaw; both in `.env.example`).
 
-- Kraków: ZTP tram and bus feeds. Warsaw: mkuran.pl feeds for ZTM Warszawa and WKD. The national
-  rail feed is not chosen yet (#43).
+- Kraków: ZTP tram and bus feeds, and national rail (`rail`). Warsaw: mkuran.pl feeds for ZTM Warszawa
+  and WKD, and national rail (`rail`).
+- The national rail feed is one file for both cities (mkuran.pl "Polish Trains"). Each city's import
+  cuts it to the city's area. Warsaw leaves out SKM, which the ZTM feed already has (#43).
 - Each import creates a new version. The active version stays in use until the new one has loaded
   completely.
 - Run an import by hand:
@@ -147,6 +151,7 @@ city at `GTFS_IMPORT_HOUR`:`GTFS_IMPORT_MINUTE` (default 03:30, Europe/Warsaw; b
   docker compose exec backend python manage.py import_gtfs krakow
   docker compose exec backend python manage.py import_gtfs krakow --feed ztp_tram --force
   docker compose exec backend python manage.py import_gtfs krakow --feed ztp_tram --file transit_data/fixtures/gtfs/minimal
+  docker compose exec backend python manage.py import_gtfs warszawa --feed rail
   ```
 
   `--feed` limits the run to one feed. `--force` bypasses the size check (a new version with less
@@ -160,7 +165,7 @@ city at `GTFS_IMPORT_HOUR`:`GTFS_IMPORT_MINUTE` (default 03:30, Europe/Warsaw; b
   `.env.example`; set them in the settings file if needed.
 
 Retention, sizes and the import rules are in [docs/architecture.md](docs/architecture.md). Licences
-and attribution of each source are in [docs/decisions.md](docs/decisions.md), entry 13.
+and attribution of each source are in [docs/decisions.md](docs/decisions.md), entries 13 and 19.
 
 ## Tests
 
@@ -207,8 +212,11 @@ not secrets.
   server; hosting is not decided yet.
 - Warsaw's timetable comes from the mkuran.pl community feed, maintained by one person. The importer
   keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
-- OTP graphs are rebuilt by hand. Their graph has no national rail (#43), no bicycle transfers
-  (`docs/decisions.md`, entry 16), and no realtime updates.
+  The national rail feed comes from the same source and has the same risk.
+- National rail has static timetables only. There is no realtime data for it yet.
+- OTP graphs are rebuilt by hand. A graph built before the rail feed was added has no national rail
+  until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
+  realtime updates.
 - Attributions required by the data licences are not shown in the app yet (#25).
 
 ## Repository layout

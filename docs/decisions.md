@@ -367,3 +367,51 @@ commands in the README. The scheduled rebuild is a follow-up.
 **Consequences.**
 - Until the next rebuild, OTP plans journeys on the old timetable.
 - A rebuild restarts the service. It is not zero-downtime.
+
+## 18. National rail: one mkuran.pl feed, cut to each city's area at import
+
+**Status:** accepted (2026-11-14)
+
+**Context.** National rail was missing from both cities' timetables and graphs. It was split out of
+#7 as #43. The national feed covers the whole country, but each city needs only its own area.
+
+**Decision.** Both cities use one feed, `rail` (`https://mkuran.pl/gtfs/polish_trains.zip`, "Polish
+Trains" by mkuran.pl). It is about 26 MB, rebuilt daily, covers a 30-day window and has 13 agencies.
+Each city cuts it with an optional `filter` in its city config: `bbox` and, for Warsaw,
+`exclude_agencies: [SKM]`. Kraków bbox `[19.55, 49.88, 20.40, 50.27]`; Warsaw bbox
+`[20.55, 51.90, 21.50, 52.52]`. SKM is already in the `ztm` feed. The cut rules are in
+`docs/architecture.md` (static GTFS import). OTP inputs use the same cut feed.
+
+**Alternatives.** The alternatives considered for #43 are not recorded here.
+
+**Consequences.**
+- Measured on the real feed: Kraków 248 stops, 1,721 trips; Warsaw 447 stops, 8,412 trips.
+- Rail has static timetables only. Its realtime updates are not in scope.
+- The same single-maintainer risk as entry 12 applies to this feed.
+- A changed `filter` forces a re-import. A failed or empty cut fails the version; the active version stays.
+- Graphs built before this change have no rail until they are rebuilt (see entry 17).
+- Attribution for this feed is in entry 19.
+
+## 19. Rail licences: PKP PLK processing notice not acted on for now
+
+**Status:** accepted (2026-11-14, decided by the maintainer)
+
+**Context.** The Polish Trains feed contains data from PKP PLK and Koleje Mazowieckie (KM). Their
+public-sector reuse terms ask that the source, the creation or retrieval time and the fact that the
+data was processed are stated. PKP PLK's terms also ask to be informed about processing. KM's terms
+have a clause on use "in its originally obtained form".
+
+**Decision.**
+1. The PKP PLK notice about processing is not acted on. This is a private, non-commercial project.
+   Revisit before any public use.
+2. The KM clause "in its originally obtained form" is accepted as written.
+3. Both cities' configs list the three attributions from the feed's `attributions.txt`: PKP PLK,
+   Mikołaj Kuranowski (Polish Trains GTFS) and Koleje Mazowieckie. They will be shown on the data
+   sources page (#25).
+
+**Alternatives.** Inform PKP PLK before processing. Not done for now (point 1).
+
+**Consequences.**
+- Before any public release, revisit point 1 and check the attribution text.
+- The licence strings in the city configs are English sentences. #25 needs translated text or short
+  codes to show them in the app.

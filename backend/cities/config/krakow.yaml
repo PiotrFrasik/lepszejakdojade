@@ -52,9 +52,13 @@ feeds:
     # checked 2026-11-14: Mobilis agglomeration buses (~33 lines).
     - id: ztp_mobilis_bus
       url: https://gtfs.ztp.krakow.pl/GTFS_KRK_M.zip
-    # national rail: see #43
+    # checked 2026-11-14: national rail GTFS by mkuran.pl (PKP PLK timetables; KML, PolRegio,
+    # PKP Intercity, Koleje Śląskie...), rebuilt daily, ~26 MB, 30-day window. Cut down on
+    # import to calls inside `filter.bbox` (the extent of the ZTP feeds, rounded outwards).
     - id: rail
-      url: null
+      url: https://mkuran.pl/gtfs/polish_trains.zip
+      filter:
+        bbox: [19.55, 49.88, 20.40, 50.27]
   gtfs_rt:
     # checked 2026-11-14
     - id: ztp_tram_vehicle_positions
@@ -109,6 +113,23 @@ attributions:
     url: https://gtfs.ztp.krakow.pl/
     licence: CC BY 4.0
     licence_url: https://creativecommons.org/licenses/by/4.0/
+  # checked 2026-11-14: reuse requires stating the source, when the data was created and
+  # retrieved, that it was processed, and informing PKP PLK about the processing.
+  - name: PKP Polskie Linie Kolejowe S.A.
+    url: https://www.plk-sa.pl/klienci-i-kontrahenci/api-otwarte-dane
+    licence: PKP PLK public sector information reuse terms
+    licence_url: https://bip.plk-sa.pl/ponowne-wykorzystywanie
+  # checked 2026-11-14: mkuran.pl asks to expose all attributions in the feed's attributions.txt
+  # (Mikołaj Kuranowski, PKP PLK, Koleje Mazowieckie).
+  - name: Mikołaj Kuranowski – Polish Trains GTFS
+    url: https://mkuran.pl/gtfs/
+    licence: Provided as is; carries PKP PLK and Koleje Mazowieckie terms
+    licence_url: https://mkuran.pl/gtfs/
+  # checked 2026-11-14: source, creation/retrieval time and processing must be stated.
+  - name: Koleje Mazowieckie – KM sp. z o.o.
+    url: https://mazowieckie.com.pl/
+    licence: Koleje Mazowieckie public sector information reuse terms
+    licence_url: https://bip.mazowieckie.com.pl/pl/ponowne-wykorzystywanie-informacji-sektora-publicznego
   # Street and map data (e.g. the OpenTripPlanner street graph).
   - name: OpenStreetMap contributors
     url: https://www.openstreetmap.org/copyright

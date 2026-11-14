@@ -17,6 +17,11 @@ Per feed (``import_feed``):
    without ``force``. Interrupted or unexpected failures are retried on the next run.
 5. After commit: ANALYZE the tables and delete versions beyond the previous one.
 
+A feed with a ``filter`` in city config (``area_filter``) is cut down to the city's area
+before step 4. The filter config is stored in the version's report; when it differs from
+the active version's, the feed is downloaded and imported again even if the file did not
+change, and the size check against the active version is skipped (the area changed).
+
 ``--force`` (``force=True``) skips the conditional GET and the sha256 comparison.
 
 Settings (optional, defaults in brackets):
@@ -58,6 +63,7 @@ from ..models import (
     StopTime,
     Trip,
 )
+from .area_filter import AreaFilter, AreaFilterError, feed_area_filter, filter_feed
 from .download import DownloadError, FetchedFeed, download_feed, local_feed
 from .loader import FeedRejected, expiry_warning, load_feed
 from .reader import GtfsFormatError, GtfsSource, validate_structure
@@ -148,6 +154,15 @@ def _import_locked(city: City, feed: Feed, force: bool, file: Path | None) -> Im
         city_id=city.id, feed_id=feed.id, status=FeedVersion.Status.ACTIVE
     ).first()
     source_url = f"file:{file}" if file is not None else feed.url
+    try:
+        area = feed_area_filter(feed)
+    except AreaFilterError as exc:
+        error = f"invalid filter in city config: {exc}"
+        version = _record_failure(city, feed, source_url, now, error)
+        return ImportResult(city.id, feed.id, Outcome.FAILED, error, version.pk)
+    filter_config = area.as_dict() if area is not None else {}
+    report.area_filter = {"config": filter_config} if area is not None else {}
+    filter_changed = active is not None and _filter_config(active) != filter_config
     workdir = Path(tempfile.mkdtemp(prefix="gtfs-"))
     try:
         # ------------------------------------------------------------ download
@@ -155,7 +170,7 @@ def _import_locked(city: City, feed: Feed, force: bool, file: Path | None) -> Im
             if file is not None:
                 fetched = local_feed(Path(file))
             else:
-                use_conditional = active is not None and not force
+                use_conditional = active is not None and not force and not filter_changed
                 fetched = download_feed(
                     feed.url,
                     workdir / "feed.zip",
@@ -170,7 +185,7 @@ def _import_locked(city: City, feed: Feed, force: bool, file: Path | None) -> Im
         report.timings_s["download"] = time.monotonic() - started
 
         unchanged = fetched.not_modified or (active is not None and fetched.sha256 == active.sha256)
-        if not force and active is not None and unchanged:
+        if not force and not filter_changed and active is not None and unchanged:
             active.checked_at = now
             active.save(update_fields=["checked_at"])
             reason = "not modified (HTTP 304)" if fetched.not_modified else "same sha256"
@@ -194,7 +209,11 @@ def _import_locked(city: City, feed: Feed, force: bool, file: Path | None) -> Im
                 .order_by("-created_at", "-pk")
                 .first()
             )
-            if last_failed is not None and last_failed.data_error:
+            if (
+                last_failed is not None
+                and last_failed.data_error
+                and _filter_config(last_failed) == filter_config
+            ):
                 return ImportResult(
                     city.id,
                     feed.id,
@@ -216,9 +235,15 @@ def _import_locked(city: City, feed: Feed, force: bool, file: Path | None) -> Im
             last_modified=fetched.last_modified,
             size_bytes=fetched.size_bytes,
         )
-        return _load_version(city, version, fetched, report, started, None if force else active)
+        compare_with = None if force or filter_changed else active
+        return _load_version(city, version, fetched, report, started, compare_with, area)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _filter_config(version: FeedVersion) -> dict:
+    """Area filter config a version was imported with ({} without a filter)."""
+    return ((version.report or {}).get("area_filter") or {}).get("config") or {}
 
 
 def _check_against_active(active: FeedVersion | None, report: ImportReport) -> None:
@@ -250,13 +275,23 @@ def _load_version(
     report: ImportReport,
     started: float,
     compare_with: FeedVersion | None,
+    area: AreaFilter | None = None,
 ) -> ImportResult:
     load_started = time.monotonic()
     max_uncompressed = getattr(
         settings, "TRANSIT_GTFS_MAX_UNCOMPRESSED_BYTES", 5 * 1024 * 1024 * 1024
     )
+    filter_dir = None
     try:
-        with GtfsSource(fetched.path, max_uncompressed_bytes=max_uncompressed) as source:
+        path = fetched.path
+        if area is not None:
+            filter_dir = Path(tempfile.mkdtemp(prefix="gtfs-filter-"))
+            path = filter_dir / "filtered.zip"
+            report.area_filter = filter_feed(
+                fetched.path, path, area, max_uncompressed_bytes=max_uncompressed
+            ).as_dict()
+            report.timings_s["filter"] = time.monotonic() - load_started
+        with GtfsSource(path, max_uncompressed_bytes=max_uncompressed) as source:
             validate_structure(source)
             with transaction.atomic():
                 load_feed(version, source, report)
@@ -278,7 +313,7 @@ def _load_version(
                 version.duration_ms = int((time.monotonic() - started) * 1000)
                 version.report = report.as_dict()
                 version.save()
-    except (GtfsFormatError, FeedRejected) as exc:
+    except (GtfsFormatError, FeedRejected, AreaFilterError) as exc:
         return _mark_failed(version, report, started, str(exc), data_error=True)
     except Exception as exc:
         # Database errors, time limits (SoftTimeLimitExceeded), disk full...: not the
@@ -287,6 +322,9 @@ def _load_version(
         return _mark_failed(
             version, report, started, f"{type(exc).__name__}: {exc}", data_error=False
         )
+    finally:
+        if filter_dir is not None:
+            shutil.rmtree(filter_dir, ignore_errors=True)
 
     # Post-commit housekeeping must not turn a successful import into a failure.
     try:
