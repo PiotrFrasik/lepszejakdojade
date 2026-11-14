@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { AppLocale } from '@/i18n'
 import { useLocaleStore } from '@/stores/locale'
 
-// Placeholder PL/EN toggle; the full switcher (browser detection, account sync) is #30.
+// PL/EN switcher. The initial language comes from `getInitialLocale()`; account sync is #17.
 const { t } = useI18n()
 const localeStore = useLocaleStore()
 
