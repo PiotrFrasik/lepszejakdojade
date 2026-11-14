@@ -15,6 +15,7 @@ x-backend-env: &backend-env
   APP_VERSION: ${APP_VERSION:-dev}
   OTP_URL: http://otp:8080
   GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  REALTIME_POLL_INTERVAL_SECONDS: ${REALTIME_POLL_INTERVAL_SECONDS:-30}
 
 x-backend-base: &backend-base
   build:
