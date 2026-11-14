@@ -16,12 +16,16 @@ flowchart LR
         cb["celery-beat"]
         redis[("Redis 7<br/>Celery broker")]
         db[("PostgreSQL 16<br/>+ PostGIS")]
-        otp["OpenTripPlanner 2<br/>profile 'otp', no graph yet"]
+        otpdata[("otp/data/city/<br/>git-ignored, OTP base dir")]
+        okr["OTP 2.6 Kraków<br/>service otp-krakow, profile otp<br/>127.0.0.1:8080"]
+        owa["OTP 2.6 Warszawa<br/>service otp-warszawa, profile otp<br/>127.0.0.1:8081"]
+        obuild["OTP graph build, one-shot<br/>otp-build-krakow, otp-build-warszawa<br/>profile otp-build"]
     end
 
     gemini["Google Gemini API<br/>(planned, #18)"]
     ztp["ZTP Kraków<br/>GTFS-RT TripUpdates<br/>tram, bus, Mobilis bus (#38)"]
     gtfs["GTFS static feeds<br/>ZTP Kraków, mkuran.pl (Warsaw, WKD)"]
+    osm["Geofabrik OSM extracts<br/>małopolskie, mazowieckie"]
 
     user --> fe
     fe -- "/api/v1 (Vite proxy)" --> be
@@ -30,9 +34,16 @@ flowchart LR
     redis --> cw
     cw --> db
     cw -- "HTTP GET, protobuf" --> ztp
-    be -.-> otp
+    be -. "get_otp_url(city), planned #12" .-> okr
+    be -. "get_otp_url(city), planned #12" .-> owa
     be -.-> gemini
     cw -- "HTTP GET, zip (conditional)" --> gtfs
+    gtfs -- "HTTP GET, zip (conditional)" --> be
+    osm -- "HTTP GET, pbf (conditional)" --> be
+    be -- "prepare_otp_inputs<br/>GTFS zips, OSM clip (osmium)" --> otpdata
+    obuild -- "otp --build --save" --> otpdata
+    otpdata -- "otp --load --serve" --> okr
+    otpdata -- "otp --load --serve" --> owa
 ```
 
 | Service | Where | Notes |
@@ -42,7 +53,8 @@ flowchart LR
 | celery-worker, celery-beat | `backend/` image | Same image as the backend; runs background tasks |
 | Redis | `redis:7-alpine` | Celery broker |
 | PostgreSQL | `postgis/postgis:16-3.4` | Main database |
-| OpenTripPlanner | `opentripplanner:2.6.0` | Started only with `--profile otp`; journey search is planned (#8, #12) |
+| OpenTripPlanner | `opentripplanner/opentripplanner:2.6.0` | One instance per city: `otp-krakow` and `otp-warszawa`, profile `otp`, bound to 127.0.0.1 on ports 8080 and 8081. Graphs are built by one-shot services (profile `otp-build`). Journey search is planned (#12) |
+| OSM extracts | Geofabrik, external | Regional extracts for Małopolska and Mazowsze. `prepare_otp_inputs` clips them with `osmium-tool`, which is installed in the backend image (#8) |
 | Gemini | external | Planned (#18). Behind a provider interface |
 | ZTP Kraków feeds | external | Read by the realtime collector |
 | GTFS static feeds | external | Imported nightly by `celery-worker` (#7). Kraków: ZTP. Warsaw: mkuran.pl (ZTM data). WKD: mkuran.pl |
@@ -183,14 +195,90 @@ About 90,000 stop times per second, 210 MB peak memory. The database was about 3
 active and one previous version of all feeds. A departures query for one stop on one date took
 6.9 ms; a trigram name search took 0.4 ms (measured on the same data).
 
-Limits (not built yet): no check for times on the first or last stop, no check that times rise
-monotonically, and the raw zip files are not kept (OTP, #8, will need them).
+Limits (not built yet): no check for times on the first or last stop, and no check that times rise
+monotonically. The importer does not keep the zip files; the OTP inputs step (#8) downloads its own
+copies (see below).
 
-### Journey search (planned, #8, #12)
+### OpenTripPlanner graphs (implemented, #8)
 
-Frontend sends `A → B` with time and preferences to the backend. The backend calls OTP
-(`OTP_URL`) and returns journeys. The app has no routing code of its own; the engine is OpenTripPlanner 2
-([concept](concept.md), section 1).
+OTP 2 serves one graph per instance, so each city has its own OTP service and graph
+([decision 14](decisions.md#14-one-opentripplanner-instance-per-city)). A graph is made in three steps:
+
+1. **Prepare inputs.** `manage.py prepare_otp_inputs --city <city>` runs in the backend container.
+   It downloads the city's `gtfs_static` feeds that have a URL (national rail is skipped until #43)
+   and the Geofabrik regional OSM extract. It clips the extract with
+   `osmium extract --strategy complete_ways` to the bbox of all GTFS stops plus 3 km
+   ([decision 15](decisions.md#15-clip-the-osm-extract-with-the-osmium-tool-cli-in-the-backend-image)).
+   It writes the city's OTP config and `prepare-report.json`.
+2. **Build.** The one-shot service `otp-build-<city>` runs `otp --build --save` and writes `graph.obj`.
+3. **Serve.** The service `otp-<city>` runs `otp --load --serve`. Health: `GET /otp/actuators/health`.
+   GTFS GraphQL: `POST /otp/gtfs/v1`.
+
+```mermaid
+flowchart LR
+    src["GTFS zips<br/>OSM extract"] --> prep["prepare_otp_inputs<br/>(backend container)"]
+    prep --> data[("otp/data/city/<br/>graph.obj")]
+    data --> build["otp-build-city<br/>otp --build --save"]
+    build --> data
+    data --> serve["otp-city<br/>otp --load --serve"]
+```
+
+Rules the steps follow:
+
+- **Config layout.** `otp/config/` holds the shared, committed config (build, router and OTP
+  config). `otp/<city>/` is an optional committed override, deep-merged over it. Lists are replaced,
+  not merged. The generated config for a city is written to `otp/data/<city>/`.
+- **City-specific values** come from the city config and are added by `prepare_otp_inputs`: feed
+  files, the OSM file and the time zone. Nothing city-specific is written by hand in `otp/config/`.
+- **OTP data directory.** `otp/data/<city>/` is the OTP base directory. It is git-ignored.
+  Each prepare and build overwrites its files.
+- **City config section.** New internal section `otp` in `backend/cities/config/<id>.yaml`:
+  `osm_url` (https, required) and `bbox` (`[min_lon, min_lat, max_lon, max_lat]`, optional; `null`
+  means absent). It is never returned by the API.
+- **Downloads** are conditional. A failed download keeps the previous file. GTFS uses
+  `TRANSIT_GTFS_MAX_BYTES` and `TRANSIT_GTFS_DOWNLOAD_MAX_SECONDS`. The OSM extract uses
+  `OTP_OSM_MAX_BYTES` and `OTP_OSM_DOWNLOAD_MAX_SECONDS`.
+- **One run per city.** A per-city lock (`cache/prepare.lock`) stops two prepares from running at once.
+- **Warnings, not errors.** A clip bbox wider than 2 degrees on either axis, or outside the bounds of
+  the extract, is written as a warning to the output and to `prepare-report.json`. A single bad stop
+  can widen the bbox and the build heap needed; the warning shows it.
+- **Mounts.** The backend mounts `./otp` at `/otp` read-write. The celery worker and beat mount it
+  read-only.
+- **Backend access.** `cities.registry.get_otp_url(city)` returns the URL from `OTP_URL_KRAKOW` or
+  `OTP_URL_WARSZAWA`. No backend code calls OTP yet; the journeys endpoint is #12.
+
+Measured on 2026-11-14 (Docker with 12 GB, 8 CPUs, OTP 2.6):
+
+| City | Prepare | Build | Build heap (peak RSS) | `graph.obj` | Serve heap (RSS) | OSM extract |
+|---|---|---|---|---|---|---|
+| Kraków | 34–40 s | 4–5.5 min | `-Xmx4G` (3.5 GB) | 122 MB | `-Xmx2G` (1 GB) | 204 → 72 MB |
+| Warsaw | 2 min 13 s | 8 min 21 s | `-Xmx7G` (7.4 GB) | 244 MB | `-Xmx3G` (1.8 GB) | 302 → 134 MB |
+
+Settings (defaults in the table; the OTP URLs are set in `.env.example`). An empty
+`OTP_OSMIUM_BIN` or `OTP_BBOX_BUFFER_KM` uses the default:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `OTP_URL_KRAKOW`, `OTP_URL_WARSZAWA` | see `.env.example` | Base URL of each instance, as the backend sees it. Replaces the old `OTP_URL` |
+| `OTP_DATA_DIR` | `<repo>/otp/data` (`/otp/data` in the container) | Root of the per-city data directories |
+| `OTP_CONFIG_DIR` | `<repo>/otp` (`/otp` in the container) | Root of the shared config and overrides |
+| `OTP_OSMIUM_BIN` | `osmium` | `osmium-tool` binary |
+| `OTP_BBOX_BUFFER_KM` | `3` | Buffer around the GTFS stops. Must be finite and at least 0; otherwise the backend fails at startup (`ImproperlyConfigured`) |
+| `OTP_OSM_MAX_BYTES` | 2 GB | Size limit for the OSM download |
+| `OTP_OSM_DOWNLOAD_MAX_SECONDS` | `1800` | Time limit for the OSM download |
+| `OTP_KRAKOW_BUILD_JAVA_OPTS`, `OTP_WARSZAWA_BUILD_JAVA_OPTS` | `-Xmx4G`, `-Xmx7G` | JVM options for the build |
+| `OTP_KRAKOW_SERVE_JAVA_OPTS`, `OTP_WARSZAWA_SERVE_JAVA_OPTS` | `-Xmx2G`, `-Xmx3G` | JVM options for the server |
+| `OTP_KRAKOW_PORT`, `OTP_WARSZAWA_PORT` | `8080`, `8081` | Host ports, bound to 127.0.0.1 |
+
+Build and run commands are in the [README](../README.md#opentripplanner-graphs).
+The rules for the input files, failure cases and the lock file are in
+[`otp/README.md`](../otp/README.md).
+
+### Journey search (planned, #12)
+
+Frontend sends `A → B` with time and preferences to the backend. The backend calls the OTP
+instance of the city and returns journeys. The app has no routing code of its own; the engine is
+OpenTripPlanner 2 ([concept](concept.md), section 1).
 
 ### Timetable (planned, #9, #10)
 
@@ -215,7 +303,7 @@ backend returns text or cards. Rate limits apply per user.
 | `StopEvent` (raw realtime) | Kept 60 days (`RAW_EVENT_RETENTION_DAYS`) | Deletion job not built yet; comes with #22 |
 | `FeedFetch` (one row per poll) | About 2,880 rows per feed per day at a 30 s interval | No retention rule yet |
 | Static GTFS versions (`FeedVersion` and its rows) | Active, one superseded, last 5 failed versions per feed (see above) | Built (#7) |
-| Downloaded GTFS zip files | Not kept | OTP (#8) needs them; not decided yet |
+| OTP inputs and graph (`otp/data/<city>/`: GTFS zips, clipped and unclipped OSM extract, `graph.obj`) | Overwritten by each prepare and build; no history | Built (#8). Git-ignored |
 | Nightly statistics | Planned (#22) | Not built |
 
 ## Operating the collector
@@ -234,3 +322,15 @@ backend returns text or cards. Rate limits apply per user.
   warning appears 14 days before the end of service.
 - Warsaw uses the mkuran.pl feed. A single maintainer runs it; the official ZTM feed is the fallback
   (see `docs/decisions.md`, entry 12).
+
+## Operating the OTP graphs
+
+- Rebuild by hand after a feed changes: `make otp-build CITY=<city>` (see the
+  [README](../README.md#opentripplanner-graphs)). The rebuild is not scheduled yet
+  ([decision 17](decisions.md#17-graph-rebuild-is-manual-for-now)).
+- The `make` build target restarts the city's service if it is running. While it restarts, that
+  city's OTP does not answer.
+- Measured peak memory: Warsaw build 7.4 GB RSS, Kraków build 3.5 GB RSS. Docker was given 12 GB.
+- The bicycle transfers are left out on purpose ([decision 16](decisions.md#16-no-bicycle-transfers-in-the-transfer-pre-computation)).
+- Each prepare writes `prepare-report.json` in `otp/data/<city>/`. Check its warnings after a
+  feed or extract change.

@@ -287,3 +287,83 @@ city config (see decision 1).
 - `UM_WARSZAWA_API_KEY` is in `.env.example` and compose, empty. Its resource id is not confirmed
   (#20).
 - Re-check the licence text when a publisher changes its terms.
+
+## 14. One OpenTripPlanner instance per city
+
+**Status:** accepted (2026-11-14)
+
+**Context.** OpenTripPlanner 2 serves exactly one graph per instance. The app covers two cities
+with separate feeds and separate OSM extracts.
+
+**Decision.** Each city runs its own OTP 2.6 service: `otp-krakow` on 127.0.0.1:8080 and
+`otp-warszawa` on 127.0.0.1:8081, both under the `otp` compose profile. Each has its own data
+directory, `otp/data/<city>/`, and its own one-shot build service under the `otp-build` profile.
+The backend finds each instance through `cities.registry.get_otp_url(city)`, which reads
+`OTP_URL_KRAKOW` or `OTP_URL_WARSZAWA`.
+
+**Alternatives.** One combined graph for both cities in one instance. Not possible with OTP 2,
+which serves one graph per instance.
+
+**Consequences.**
+- Two containers, two ports and two graph builds. Each city is built separately.
+- Heap is set per city and per phase: build 4G (Kraków) and 7G (Warsaw); serve 2G and 3G.
+- The old single `OTP_URL` setting is removed.
+
+## 15. Clip the OSM extract with the osmium-tool CLI in the backend image
+
+**Status:** accepted (2026-11-14)
+
+**Context.** The Geofabrik regional extracts are large: Małopolska is 204 MB and Mazowsze is 302 MB.
+A graph for the whole region needs more heap and build time than the served area requires. The
+clip must keep whole ways at the border, so that streets are not cut.
+
+**Decision.** `prepare_otp_inputs` clips the regional extract with
+`osmium extract --strategy complete_ways` to the bounding box of all GTFS stops plus 3 km
+(`OTP_BBOX_BUFFER_KM`). A city config can set `otp.bbox`. The `osmium-tool` package is installed in
+the backend image. `OTP_OSMIUM_BIN` names the binary.
+
+**Alternatives.**
+- pyosmium. It has no equivalent of `extract` with `complete_ways`.
+- No clip (`--no-clip`). It works, but needs more heap and build time.
+
+**Consequences.**
+- The clip result is 72 MB for Kraków (from 204 MB) and 134 MB for Warsaw (from 302 MB).
+- The real clip test does not run in CI yet, because the CI image has no `osmium-tool`. Adding it to
+  the CI apt list is a follow-up.
+- A bad stop can widen the bbox. `prepare_otp_inputs` warns when the bbox is wider than 2 degrees
+  or reaches beyond the extract.
+
+## 16. No bicycle transfers in the transfer pre-computation
+
+**Status:** accepted (2026-11-14)
+
+**Context.** OTP pre-computes transfers between stops when it builds the graph. With bicycle
+transfers of up to 30 minutes, the Kraków build used 6.4 GB RSS, made about 10 times more transfers
+and produced a 343 MB graph.
+
+**Decision.** Transfers are walking, plus wheelchair, capped at 15 minutes. Bicycle transfers are
+not in the build configuration (`otp/config/build-config.json`).
+
+**Alternatives.** Bicycle transfers with a 30-minute cap. Not chosen; the measured cost is in the context above.
+
+**Consequences.**
+- Journeys that need a bicycle transfer between stops are not found by OTP.
+- The build fits in the heap sizes above (Kraków peak 3.5 GB RSS, Warsaw peak 7.4 GB RSS).
+- The decision can be revisited with more memory or a shorter cap.
+
+## 17. Graph rebuild is manual for now
+
+**Status:** accepted (2026-11-14)
+
+**Context.** The graph is built from the static GTFS feeds and the OSM extract. The Warsaw feed is a
+rolling window, so the graph goes out of date each day. A build takes 4 to 8 minutes and up to 7.4 GB
+of memory.
+
+**Decision.** The rebuild is a manual step: `make otp-build CITY=<city>`, or the three raw compose
+commands in the README. The scheduled rebuild is a follow-up.
+
+**Alternatives.** A scheduled rebuild in Celery beat. Not built yet.
+
+**Consequences.**
+- Until the next rebuild, OTP plans journeys on the old timetable.
+- A rebuild restarts the service. It is not zero-downtime.
