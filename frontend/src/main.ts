@@ -4,10 +4,8 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import App from './App.vue'
-import { getCurrentLocale, i18n, syncDocumentLang } from './i18n'
+import { i18n } from './i18n'
 import router from './router'
-
-syncDocumentLang(getCurrentLocale())
 
 const app = createApp(App)
 
