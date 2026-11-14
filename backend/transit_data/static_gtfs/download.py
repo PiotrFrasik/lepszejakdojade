@@ -42,15 +42,27 @@ class FetchedFeed:
     http_status: int | None = None
 
 
-def download_feed(url: str, dest: Path, etag: str = "", last_modified: str = "") -> FetchedFeed:
+def download_feed(
+    url: str,
+    dest: Path,
+    etag: str = "",
+    last_modified: str = "",
+    *,
+    max_bytes: int | None = None,
+    max_seconds: float | None = None,
+    label: str = "feed",
+) -> FetchedFeed:
     """Download ``url`` into the file ``dest``. Raises DownloadError.
 
     ``etag`` / ``last_modified`` from the previous download make the request conditional;
-    a 304 answer returns ``FetchedFeed(path=None, not_modified=True)``.
+    a 304 answer returns ``FetchedFeed(path=None, not_modified=True)``. ``max_bytes`` and
+    ``max_seconds`` override the GTFS settings; ``label`` names the file in error messages.
     """
     timeout = getattr(settings, "TRANSIT_GTFS_HTTP_TIMEOUT", 120)
-    max_bytes = getattr(settings, "TRANSIT_GTFS_MAX_BYTES", 1024 * 1024 * 1024)
-    max_seconds = getattr(settings, "TRANSIT_GTFS_DOWNLOAD_MAX_SECONDS", 900)
+    if max_bytes is None:
+        max_bytes = getattr(settings, "TRANSIT_GTFS_MAX_BYTES", 1024 * 1024 * 1024)
+    if max_seconds is None:
+        max_seconds = getattr(settings, "TRANSIT_GTFS_DOWNLOAD_MAX_SECONDS", 900)
     deadline = time.monotonic() + max_seconds
     headers = {"User-Agent": USER_AGENT, "Accept": "application/zip, */*"}
     if etag:
@@ -73,7 +85,7 @@ def download_feed(url: str, dest: Path, etag: str = "", last_modified: str = "")
                         )
                     size += len(chunk)
                     if size > max_bytes:
-                        raise DownloadError(f"feed larger than {max_bytes} bytes", status)
+                        raise DownloadError(f"{label} larger than {max_bytes} bytes", status)
                     digest.update(chunk)
                     out.write(chunk)
     except urllib.error.HTTPError as exc:

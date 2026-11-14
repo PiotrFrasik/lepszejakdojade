@@ -32,15 +32,53 @@ docker compose up -d --build
 
 Stop the stack with `docker compose down`.
 
-### Optional: OpenTripPlanner
+### OpenTripPlanner graphs
 
-OTP is not started by default. It runs only with the `otp` profile:
+OpenTripPlanner (OTP) is the journey engine. It runs one instance per city, and each instance serves
+one graph built from that city's timetables and map. OTP is not started by `docker compose up`.
+The app does not call OTP yet; the journeys endpoint is planned (#12).
+
+Build a city's graph, then start its service:
 
 ```bash
-docker compose --profile otp up
+make otp-build CITY=krakow    # prepare inputs, build the graph, restart the service if it is running
+make otp-up CITY=krakow       # start the city's OTP service
+make otp-down CITY=krakow     # stop it
 ```
 
-The OTP graph is built in a later step (issue #8), so OTP will not answer journey queries yet.
+`CITY` is `krakow` or `warszawa`. Build one city at a time. The Makefile needs a POSIX shell:
+Linux, macOS, or Git Bash on Windows.
+
+Debug UI, once a service is running: Kraków http://localhost:8080, Warsaw http://localhost:8081.
+The ports are set with `OTP_KRAKOW_PORT` and `OTP_WARSZAWA_PORT`.
+
+Without `make`, run the same three steps by hand. Replace `krakow` with `warszawa` for Warsaw.
+Create the directory first (`mkdir -p` works in Git Bash and Linux):
+
+```bash
+mkdir -p otp/data/krakow
+docker compose run --rm --user "$(id -u):$(id -g)" backend python manage.py prepare_otp_inputs --city krakow
+docker compose --profile otp-build run --rm otp-build-krakow
+docker compose --profile otp up -d otp-krakow
+```
+
+- `--user "$(id -u):$(id -g)"` is needed on Linux, so the files are not written as root. In
+  PowerShell there is no `id`; leave `--user` out there.
+- If the service is already running, restart it after a build:
+  `docker compose --profile otp restart otp-krakow`.
+
+Notes:
+
+- The first prepare downloads the city's GTFS feeds and the regional OSM extract (Geofabrik). It
+  needs network access. Later runs download only what changed.
+- The OSM extract is clipped with `osmium-tool`. It is installed in the backend image; nothing to
+  install on the host.
+- Memory: measured on Docker with 12 GB and 8 CPUs. The Warsaw build peaked at 7.4 GB RSS, the
+  Kraków build at 3.5 GB.
+- The graph does not update itself. Rebuild after a feed changes (manual for now, see
+  [docs/decisions.md](docs/decisions.md), entry 17).
+- Details, settings and the layout of `otp/data/` are in [docs/architecture.md](docs/architecture.md)
+  and [otp/README.md](otp/README.md).
 
 ### Gemini API key
 
@@ -169,6 +207,8 @@ not secrets.
   server; hosting is not decided yet.
 - Warsaw's timetable comes from the mkuran.pl community feed, maintained by one person. The importer
   keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
+- OTP graphs are rebuilt by hand. Their graph has no national rail (#43), no bicycle transfers
+  (`docs/decisions.md`, entry 16), and no realtime updates.
 - Attributions required by the data licences are not shown in the app yet (#25).
 
 ## Repository layout

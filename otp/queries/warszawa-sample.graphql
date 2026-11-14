@@ -1,0 +1,36 @@
+# Warsaw: Warszawa Centralna (main station) -> Wilanów.
+# Departure defaults to "now"; pass the variable dateTime to pick another time, e.g.
+# {"dateTime": {"earliestDeparture": "2026-11-16T08:00:00+01:00"}}
+query WarszawaSample($dateTime: PlanDateTimeInput) {
+  planConnection(
+    origin: {
+      label: "Warszawa Centralna"
+      location: { coordinate: { latitude: 52.2288, longitude: 21.0034 } }
+    }
+    destination: {
+      label: "Wilanów"
+      location: { coordinate: { latitude: 52.1650, longitude: 21.0888 } }
+    }
+    dateTime: $dateTime
+    first: 5
+  ) {
+    searchDateTime
+    edges {
+      node {
+        start
+        end
+        duration
+        numberOfTransfers
+        walkDistance
+        legs {
+          mode
+          route { shortName }
+          from { name stop { gtfsId } }
+          to { name }
+          start { scheduledTime estimated { time delay } }
+          end { scheduledTime }
+        }
+      }
+    }
+  }
+}

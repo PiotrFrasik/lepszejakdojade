@@ -1,0 +1,32 @@
+{
+  "server": {
+    "apiProcessingTimeout": "PT10S"
+  },
+  "routingDefaults": {
+    "numItineraries": 5,
+    "transferSlack": "PT1M",
+    "waitReluctance": 1.0,
+    "walk": {
+      "speed": 1.33,
+      "reluctance": 2.0,
+      "boardCost": 600,
+      "stairsReluctance": 2.0
+    },
+    "bicycle": {
+      "speed": 5.0,
+      "boardCost": 600
+    },
+    "wheelchairAccessibility": {
+      "trip": { "onlyConsiderAccessible": false, "unknownCost": 600, "inaccessibleCost": 3600 },
+      "stop": { "onlyConsiderAccessible": false, "unknownCost": 600, "inaccessibleCost": 3600 },
+      "elevator": { "onlyConsiderAccessible": false, "unknownCost": 20, "inaccessibleCost": 3600 },
+      "maxSlope": 0.083,
+      "slopeExceededReluctance": 1.0,
+      "stairsReluctance": 100.0
+    }
+  },
+  "transit": {
+    "maxNumberOfTransfers": 12
+  },
+  "updaters": []
+}

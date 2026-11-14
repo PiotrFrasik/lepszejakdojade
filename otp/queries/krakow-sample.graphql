@@ -1,0 +1,36 @@
+# Kraków: Kraków Główny (main station) -> Plac Centralny (Nowa Huta).
+# Departure defaults to "now"; pass the variable dateTime to pick another time, e.g.
+# {"dateTime": {"earliestDeparture": "2026-11-16T08:00:00+01:00"}}
+query KrakowSample($dateTime: PlanDateTimeInput) {
+  planConnection(
+    origin: {
+      label: "Kraków Główny"
+      location: { coordinate: { latitude: 50.0677, longitude: 19.9475 } }
+    }
+    destination: {
+      label: "Plac Centralny"
+      location: { coordinate: { latitude: 50.0721, longitude: 20.0378 } }
+    }
+    dateTime: $dateTime
+    first: 5
+  ) {
+    searchDateTime
+    edges {
+      node {
+        start
+        end
+        duration
+        numberOfTransfers
+        walkDistance
+        legs {
+          mode
+          route { shortName }
+          from { name stop { gtfsId } }
+          to { name }
+          start { scheduledTime estimated { time delay } }
+          end { scheduledTime }
+        }
+      }
+    }
+  }
+}

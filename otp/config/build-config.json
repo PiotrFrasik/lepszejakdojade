@@ -1,0 +1,15 @@
+{
+  "transitServiceStart": "-P1W",
+  "transitServiceEnd": "P3M",
+  "osmDefaults": {
+    "osmTagMapping": "default"
+  },
+  "areaVisibility": true,
+  "staticParkAndRide": true,
+  "staticBikeParkAndRide": true,
+  "maxTransferDuration": "PT15M",
+  "transferRequests": [
+    { "modes": "WALK" },
+    { "modes": "WALK", "wheelchairAccessibility": { "enabled": true } }
+  ]
+}

@@ -20,8 +20,46 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## OpenTripPlanner graphs — 2026-11-14
+**Issues / PRs:** #8, #46, #47 (PRs: pending)
+**Branches:** feat/8-otp-graphs, feat/46-otp-city-config, chore/47-otp-compose
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Picked #8 (dependencies closed; unblocks journeys #12 and #13). Deferred #43 (national rail) because the source was not chosen. Created #46 (backend: OTP section in city config, because the path guard keeps data out of `backend/cities/`) and #47 (devops). No API contract change: OTP is internal; the journeys endpoint is #12. Fixed the interface (YAML `otp` section, `City.otp`, `get_otp_url`, `OTP_DATA_DIR`) in both prompts so data and backend could work in parallel. Ran an integration worktree combining the three uncommitted branches before the manual test. | Done. |
+| data (#8) | Shared OTP config, `prepare_otp_inputs` command, osmium clipping, sample GraphQL queries. Built and served both graphs with plain `docker run`; 5 itineraries per city. Round 2: separate OSM download limits, bbox sanity warnings, absolute osmium paths, `--osm-file` equal to the output rejected, per-city lock. | Done. |
+| backend (#46) | `otp` section with strict validation, `get_otp_url`, `OTP_DATA_DIR`. Follow-up: settings aligned with data's code (`OTP_CONFIG_DIR`, `OTP_OSMIUM_BIN`, `OTP_BBOX_BUFFER_KM`); new `env_float` (blank gives the default; nan, inf and negative values raise `ImproperlyConfigured`). | Done. |
+| devops (#47) | Per-city serve and build services, osmium-tool in the backend image, Make targets with `CITY` validation, `.env.example`, `.gitignore` for `otp/data/**`, `.gitattributes` (LF for the Makefile), CI env, celery mounts read-only, `mkdir` and `--user` for Linux permissions. | Done. |
+| tester (#46) | 65 to 85 tests; cities 146 passing. | Passing. |
+| tester (#8) | 102 tests. Integration run: backend 697 passed, 0 skipped (real osmium clip ran), ruff clean. Kraków end to end: prepare 40 s, build 5 min 25 s, 5 itineraries; backend container reaches `otp-krakow`. | Passing. |
+| reviewer (#46) | Rounds: 2. | APPROVED in both rounds. |
+| reviewer (#8) | Rounds: 1. | APPROVED with should-fixes, applied. |
+| reviewer (#47) | Rounds: 1. | APPROVED with should-fixes, applied. |
+
+**Review findings that mattered:**
+- A blank `OTP_BBOX_BUFFER_KM=` crashed the settings import (found by tester). It would have broken startup once listed in `.env.example`. Fixed with `env_float`.
+- A nan, inf or negative buffer would silently produce a broken clip box. Now rejected at startup.
+- Merge order: #47 removes `OTP_URL` from compose, so #46 must be merged first or together.
+- Linux: Docker creates bind-mount directories as root, so prepare could not write to them. Fixed with a host `mkdir` and `--user`.
+- Risk of CRLF line endings in the Makefile. `.gitattributes` forces LF.
+- One bad stop could inflate the clip bbox and the build heap. Now a warning.
+
+**Manual test (maintainer):** Passed, on the integration worktree.
+
+**Problems and lessons:**
+- The path guard blocked `backend` from updating a tester-owned test after a settings default change. It was routed to `tester`. The guard works as intended, but it costs a round trip.
+- The interface agreed up front still drifted: data needed `OTP_CONFIG_DIR`, `OTP_OSMIUM_BIN` and `OTP_BBOX_BUFFER_KM`, which were not in the original contract. Next time, ask the data agent to list the required settings early.
+- There is no `make` on the Windows host, so the Make targets were only dry-run in a container until integration.
+- The integration worktree caught nothing new, but gave the maintainer one place to test.
+
+**Follow-ups:**
+- Scheduled graph rebuild.
+- GTFS-RT updaters in OTP (needs a `static_feed` link on `gtfs_rt` entries in the city config).
+- National rail (#43).
+- Add `osmium-tool` to the CI apt list so the real clip test runs in CI.
+
 ## GTFS import and feed sources — 2026-11-14
-**Issues / PRs:** #38 (PR #44), #7 (PR: pending), #43 (new issue: national rail, split out of #7)
+**Issues / PRs:** #38 (PR #44), #7 (PR #45), #43 (new issue: national rail, split out of #7)
 **Branches:** chore/38-verify-feed-sources, feat/7-gtfs-import
 
 | Agent | What it did | Result |
