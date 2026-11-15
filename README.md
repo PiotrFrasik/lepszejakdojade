@@ -4,8 +4,8 @@ Public transport web app for Kraków and Warsaw. It is in early development: the
 (containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
 A realtime collector for Kraków trip updates has started and stores data in the database.
 Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
-shows them. Journey planning A→B is built on the home page. The stop view, tickets, live departures and
-the AI assistant are planned.
+shows them. Journey planning A→B is built on the home page. An AI chat assistant answers questions about
+stops, journeys, departures and timetables. The stop view, tickets and live departures are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -18,8 +18,12 @@ The app is bilingual (Polish / English) with a language switcher.
 - **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
   my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
   a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
+- **AI chat assistant** (built, #18, #19): a chat panel on every page and the `/assistant` page. Ask in
+  Polish or English for stops, journeys, departures, lines and timetables. Answers come only from app data
+  through six read-only tools. Journeys, departures and stops are shown as cards. Details are in
+  [AI chat assistant](#ai-chat-assistant).
 - **Planned:** live departures and vehicles (#20, #21), delay statistics and predictions (#22, #23),
-  tickets (demo), AI assistant (#18, #19).
+  tickets (demo).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
 
@@ -95,10 +99,14 @@ Notes:
 
 ### Gemini API key
 
-The AI assistant needs a Google Gemini API key. It is not used yet.
+The AI assistant needs a Google Gemini API key. Without it, the chat returns `503` and the rest of the app works.
 
 1. Open [Google AI Studio](https://aistudio.google.com/app/apikey) and create an API key.
 2. Put it in `.env` as `GEMINI_API_KEY=...`.
+3. Optional: set `GEMINI_MODEL` (default `gemini-flash-latest`).
+
+The free Gemini tier may let Google use prompts to improve its products. Do not type personal data into the chat.
+The assistant variables are not yet listed in `docker-compose.yml` or `.env.example` (follow-up).
 
 Never commit `.env`. It is listed in `.gitignore`.
 
@@ -206,6 +214,28 @@ Built on the OTP graphs (see [OpenTripPlanner graphs](#opentripplanner-graphs)).
   Frontend: `frontend/src/components/journey/`, `frontend/src/stores/journey.ts`.
 - Flow and rules: [docs/architecture.md](docs/architecture.md#journey-search-implemented-12-13).
 
+## AI chat assistant
+
+The assistant is the `assistant` Django app (`POST /api/v1/assistant/chat/`) and the chat UI in the frontend.
+
+- **Provider.** Gemini is behind a provider interface. The Gemini provider calls the REST API with `urllib`
+  (no SDK). Key from `GEMINI_API_KEY`, model from `GEMINI_MODEL`. See [Gemini API key](#gemini-api-key).
+- **Tools.** The model can call six read-only tools: `search_stops`, `plan_journey`, `next_departures`,
+  `list_lines`, `get_line_route` and `get_stop_timetable`. They use the same services as the public endpoints.
+  The model answers only from tool results. Tickets and live data are not available yet, and the assistant says so.
+- **No stored chats.** The API keeps no state. The browser keeps the conversation in `sessionStorage` and sends
+  the last 20 messages with each request.
+- **Language.** The answer uses the `Accept-Language` language, whatever language the question is in.
+- **Cards.** Journey, departure and stop cards are built by the server from tool results only.
+- **Limits.** 10 requests per minute and 100 per day per client IP (settings and env). Counters are kept in
+  local memory.
+- **Safety.** Tools are read-only, the city is fixed by the request, tool arguments are capped, and a canary
+  checks that the system prompt does not leak.
+- **Development.** Without a key, set `VITE_ASSISTANT_MOCK=true` for the frontend. The mock works in development
+  builds only.
+
+Contract: [docs/api.md](docs/api.md#assistant-18). Design: [docs/architecture.md](docs/architecture.md#ai-chat-assistant-implemented-18-19).
+
 ## Tests
 
 ```bash
@@ -264,11 +294,16 @@ not secrets.
   until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
   realtime updates.
 - Attributions required by the data licences are not shown in the app yet (#25).
+- AI assistant: the rate limit uses the connection IP and no proxy setting (`NUM_PROXIES`), and counters are
+  in local memory per process. A shared Redis cache is a follow-up.
+- AI assistant: a blocked prompt returns `503`. A normal answer is a follow-up.
+- AI assistant: the provider timeout (30 s) is not a hard limit for the whole tool loop.
+- AI assistant: the chat history is kept only in the browser. It is not saved on the server.
 
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/, journeys/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/, journeys/, assistant/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log
