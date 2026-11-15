@@ -12,7 +12,8 @@
     "timetable": "Timetables",
     "tickets": "Tickets",
     "assistant": "Assistant",
-    "dataSources": "Data sources"
+    "dataSources": "Data sources",
+    "tabsLabel": "Sections"
   },
   "city": {
     "label": "City",
@@ -184,6 +185,100 @@
     "distance": {
       "metres": "{value} m",
       "kilometres": "{value} km"
+    }
+  },
+  "journey": {
+    "title": "Plan your journey",
+    "panelLabel": "Journey planner",
+    "mapUnavailable": "The map cannot be shown in this browser (WebGL 2 is required). You can still search by stop name.",
+    "from": "From",
+    "to": "To",
+    "placeholder": "Stop name",
+    "swap": "Swap start and destination",
+    "myLocation": "Use my location",
+    "locating": "Finding your location…",
+    "pickOnMap": "Choose on the map",
+    "pickingFrom": "Click the map to choose where you start.",
+    "pickingTo": "Click the map to choose your destination.",
+    "cancelPicking": "Cancel",
+    "search": "Search connections",
+    "place": {
+      "mapPoint": "Point on the map",
+      "myLocation": "My location"
+    },
+    "autocomplete": {
+      "searching": "Searching stops…",
+      "noResults": "No stops match “{query}”.",
+      "error": "Could not search stops. Try again.",
+      "count": "Stops found: {count}. Use the arrow keys to choose."
+    },
+    "locationErrors": {
+      "unsupported": "This browser cannot share your location. Choose a stop or a point on the map.",
+      "denied": "Location access was denied. Allow it in the browser settings or choose a point on the map.",
+      "unavailable": "Your location is not available right now. Try again or choose a point on the map.",
+      "timeout": "Finding your location took too long. Try again."
+    },
+    "time": {
+      "label": "When",
+      "now": "Leave now",
+      "depart": "Depart at",
+      "arrive": "Arrive by",
+      "inputLabel": "Date and time"
+    },
+    "options": {
+      "title": "Options",
+      "titleActive": "Options ({count})",
+      "fewer_transfers": "Fewer transfers",
+      "less_walking": "Less walking",
+      "wheelchair": "Wheelchair accessible"
+    },
+    "problems": {
+      "missing_from": "Choose where you start.",
+      "missing_to": "Choose your destination.",
+      "same_place": "Start and destination are the same place.",
+      "invalid_time": "Enter a valid date and time."
+    },
+    "yourJourneys": {
+      "title": "Your journeys",
+      "empty": "Your recent searches and favourite journeys will appear here."
+    },
+    "results": {
+      "title": "Connections",
+      "close": "Back to search",
+      "loading": "Searching for connections…",
+      "count": "Connections found: {count}",
+      "empty": "No connections found. Try a different time or other places.",
+      "unavailable": "The journey planner is temporarily unavailable. Try again in a few minutes."
+    },
+    "itinerary": {
+      "label": "Connection {index}: {start} to {end}, {duration}",
+      "times": "{start} – {end}",
+      "noTransfers": "No transfers",
+      "transfers": "Transfers: {count}",
+      "walking": "Walking: {distance}",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details"
+    },
+    "leg": {
+      "walk": "Walk {distance} ({duration})",
+      "towards": "towards {headsign}",
+      "stops": "Stops on the way: {count}",
+      "lineLink": "Timetable of line {line}",
+      "unnamed": "Unnamed place",
+      "modes": {
+        "walk": "Walk",
+        "tram": "Tram",
+        "bus": "Bus",
+        "metro": "Metro",
+        "rail": "Train"
+      }
+    },
+    "comparison": {
+      "title": "Without public transport",
+      "walk": "On foot",
+      "bike": "By bike",
+      "value": "{duration} · {distance}",
+      "unavailable": "not available"
     }
   }
 }
