@@ -20,6 +20,7 @@ from core.serializers import ErrorSerializer
 
 from . import departures, services
 from .lines import Feeds, Line, get_line, get_stop, get_trip, lines_by_pk, list_lines
+from .overview import build_overview
 from .serializers import (
     DateQuerySerializer,
     DirectionDateQuerySerializer,
@@ -28,6 +29,7 @@ from .serializers import (
     LinesQuerySerializer,
     StopDeparturesQuerySerializer,
     StopDeparturesSerializer,
+    StopOverviewSerializer,
     StopSearchQuerySerializer,
     StopSearchResultSerializer,
     StopTimetableSerializer,
@@ -85,6 +87,7 @@ PLATFORM_PARAM = OpenApiParameter(
 )
 ERRORS = {400: ErrorSerializer, 404: ErrorSerializer}
 DEPARTURES_MAX_AGE = 15
+OVERVIEW_MAX_AGE = 300
 
 
 def _query(serializer_class: type[Serializer], request: Request) -> dict:
@@ -264,4 +267,27 @@ class StopDeparturesView(_PublicView):
         )
         response = Response(StopDeparturesSerializer(data).data)
         patch_cache_control(response, max_age=DEPARTURES_MAX_AGE)
+        return response
+
+
+class StopOverviewView(_PublicView):
+    """Lines serving a stop group (all platforms of the requested one) with the directions
+    in which they depart from it. Not paginated."""
+
+    @extend_schema(
+        operation_id="stops_retrieve",
+        summary="Stop overview",
+        parameters=[CITY_PARAM, PLATFORM_PARAM, ACCEPT_LANGUAGE],
+        responses={200: StopOverviewSerializer, 404: ErrorSerializer},
+        tags=["timetable"],
+    )
+    def get(self, request: Request, city: str, stop_id: str) -> Response:
+        found = _city(city)
+        feeds = Feeds(found)
+        group = group_of_platform(found, feeds, stop_id)
+        if group is None:
+            raise NotFound(_("Stop not found."))
+        data = build_overview(found, feeds, group, stop_id)
+        response = Response(StopOverviewSerializer(data).data)
+        patch_cache_control(response, max_age=OVERVIEW_MAX_AGE)
         return response
