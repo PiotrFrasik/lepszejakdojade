@@ -273,3 +273,20 @@ One trip on one service date (trip view after clicking a minute). `404` if the t
 ```
 - `wheelchair_accessible`: `true` / `false` / `null`. `arrival` / `departure` are `null` when GTFS has no time for
   that stop.
+
+## Stops (#59)
+### `GET /api/v1/cities/{city}/stops/?q=` (#59, part of #9)
+Stop name search for the journey form autocomplete. No auth. Active static GTFS feeds of the city only.
+- `q`: required, at least 2 characters after trimming; case- and Polish-diacritics-insensitive
+  (`plac` matches `Plac`, `zabl` matches `Żabłocie`). Prefix matches of any word rank before other substring matches,
+  then by name. Shorter `q` → `400 validation_error`.
+- **Grouped by name:** platforms with the same name within 300 m are one result. Not paginated, at most 20 results.
+```json
+[
+  { "stop_id": "ztp_tram:stop_376_47501", "name": "Bagatela", "lat": 50.0606, "lon": 19.9330,
+    "vehicle_types": ["tram", "bus"], "stop_ids": ["ztp_tram:stop_376_47501", "ztp_bus:stop_376_47502"] }
+]
+```
+- `stop_id`: a representative platform (the one closest to the group centroid); `lat` / `lon`: the group centroid.
+- `stop_ids`: all platforms of the group. `vehicle_types`: subset of `tram`, `bus`, `metro`, `rail` serving the group.
+
