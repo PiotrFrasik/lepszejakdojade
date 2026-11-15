@@ -110,6 +110,9 @@ class Feed:
     kind: str  # "gtfs_static", "gtfs_rt" or a free-form kind for other sources
     entity: str | None = None  # GTFS-RT entity type, only for kind "gtfs_rt"
     filter: FeedFilter | None = None  # area filter, only for kind "gtfs_static"
+    # Only for kind "gtfs_rt": the gtfs_static feed whose trip and stop ids this realtime
+    # feed uses. Realtime data is matched to the static timetable only through this link.
+    static_feed: str | None = None
 
 
 @dataclass(frozen=True)
@@ -321,6 +324,14 @@ def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
     )
 
     feeds = _parse_feeds(v, data["feeds"])
+    if realtime.departures:
+        # Live departures match realtime data to the timetable only through static_feed.
+        for i, feed in enumerate(f for f in feeds if f.kind == "gtfs_rt"):
+            if feed.entity == "trip_updates" and feed.static_feed is None:
+                v.fail(
+                    f"feeds.gtfs_rt[{i}].static_feed",
+                    f"required on trip_updates feed {feed.id!r} when realtime.departures is true",
+                )
 
     ticket_zones = []
     for i, raw in enumerate(v.sequence(data["ticket_zones"], "ticket_zones")):
@@ -477,17 +488,24 @@ def _parse_feeds(v: _Validator, raw: Any) -> list[Feed]:
                 ),
             )
         )
+    static_ids = {feed.id for feed in feeds}
     for i, item in enumerate(v.sequence(raw["gtfs_rt"], "feeds.gtfs_rt")):
         path = f"feeds.gtfs_rt[{i}]"
-        v.mapping(item, path, required={"id", "entity", "url"})
+        v.mapping(item, path, required={"id", "entity", "url"}, optional={"static_feed"})
         if item["entity"] not in GTFS_RT_ENTITIES:
             v.fail(f"{path}.entity", f"must be one of {', '.join(GTFS_RT_ENTITIES)}")
+        static_feed = None
+        if "static_feed" in item:
+            static_feed = v.identifier(item["static_feed"], f"{path}.static_feed")
+            if static_feed not in static_ids:
+                v.fail(f"{path}.static_feed", f"unknown gtfs_static feed {static_feed!r}")
         feeds.append(
             Feed(
                 id=v.identifier(item["id"], f"{path}.id"),
                 url=v.url(item["url"], f"{path}.url", nullable=True),
                 kind="gtfs_rt",
                 entity=item["entity"],
+                static_feed=static_feed,
             )
         )
     for i, item in enumerate(v.sequence(raw["other"], "feeds.other")):

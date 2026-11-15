@@ -9,6 +9,13 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Live departures board (#73, #74): `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=` returns the next
+  departures of a stop group. Times come from the static timetable; live times come from the realtime collector when
+  they are fresh (`realtime_available`). Each departure has an expected time, a delay and a status (`live`,
+  `canceled` or `scheduled`). Responses are cached for 15 s. The board is at `/timetable/stops/:stopId`, reached from
+  stop search and from the stop timetable. It refreshes every 30 s and turns timetable-only after 5 min without fresh
+  data. Live times are for Kraków only. City config: `static_feed` on `gtfs_rt` trip-update feeds, required when
+  `realtime.departures` is true.
 - Data sources (#25, #29): `GET /api/v1/data-sources/` returns each city's licence attributions and the
   age of its active static feeds (created, retrieved, imported, service dates). Attributions take optional
   `descriptions` (pl and en) in the city config. A Data sources page shows them per city, with a notice

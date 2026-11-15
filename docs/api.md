@@ -51,7 +51,7 @@ Content-Language: en
 | Stops search (implemented, #59) | `GET /cities/{city}/stops/?q=` |
 | Stops near a point (planned) | `GET /cities/{city}/stops/?lat=&lon=&radius=` |
 | Stop overview | `GET /cities/{city}/stops/{stop_id}/` (lines at the stop, next departures) |
-| Departures | `GET /cities/{city}/stops/{stop_id}/departures/?limit=` |
+| Departures (#73) | `GET /cities/{city}/stops/{stop_id}/departures/?limit=` (scheduled + live) |
 | Lines (implemented, #10) | `GET /cities/{city}/lines/?vehicle_type=tram\|bus\|metro\|rail` |
 | Line diagram (implemented, #10) | `GET /cities/{city}/lines/{line_id}/route/?direction=0\|1` |
 | Stop timetable (implemented, #10) | `GET /cities/{city}/lines/{line_id}/stops/{stop_id}/timetable/?direction=&date=` |
@@ -366,6 +366,50 @@ Response `200 OK`:
   OTP finds no such route or it would take more than 3 hours.
 - Errors: unknown city → `404`; city without OTP configured or OTP unreachable / timing out (10 s) / returning an error
   → `503` with code `journey_planner_unavailable` (message translated). OTP internals are never passed to the client.
+
+## Departures (#73)
+
+### `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=` (#73, part of #9 and #20)
+Next departures at a stop group, from the static timetable, with live times where the city has realtime data.
+No auth. Timetable shared rules (ids, line summary, errors) apply.
+- `stop_id`: any platform id. The response covers its whole stop group, using the same grouping as stop search
+  (platforms with the same name within 300 m).
+- `limit`: integer 1–30, default 15. Out of range or not an integer → `400 validation_error` with `details`.
+- **Window.** Departures whose effective time (`expected` when known, otherwise `scheduled`) is at or after
+  now − 1 minute, up to 3 hours after now, sorted by effective time, then `scheduled`. Trips scheduled up to
+  60 minutes before now are considered, so a late vehicle still appears. Service days yesterday, today and tomorrow
+  (city timezone) are considered, so trips past midnight are included. The last stop of a trip is not a departure.
+- **Live data.** A departure is matched to collected GTFS-Realtime stop events by trip, platform and service day.
+  An event counts only if it was seen in the last 5 minutes. The realtime-to-static feed mapping lives in city config.
+```json
+{
+  "stop": { "id": "ztp_tram:stop_376_47501", "name": "Bagatela",
+            "stop_ids": ["ztp_tram:stop_376_47501", "ztp_bus:stop_376_47502"] },
+  "generated_at": "2026-11-15T21:04:10+01:00",
+  "realtime_available": true,
+  "departures": [
+    { "line": { "id": "ztp_tram:52", "short_name": "52", "vehicle_type": "tram", "group": "day",
+                "colour": "#1f6feb", "text_colour": "#ffffff" },
+      "trip_id": "ztp_tram:block_1_trip_5", "headsign": "Czerwone Maki P+R",
+      "platform_id": "ztp_tram:stop_376_47501", "platform_code": "01",
+      "scheduled": "2026-11-15T21:06:00+01:00", "expected": "2026-11-15T21:09:00+01:00",
+      "delay_seconds": 180, "status": "live" }
+  ]
+}
+```
+- `stop`: the requested platform's group; `id` echoes the requested `stop_id`, `name` is the group name.
+- `generated_at`: server time of the response (city timezone offset).
+- `realtime_available`: `true` only when the city config declares realtime departures and at least one of its
+  trip-update feeds was fetched successfully in the last 5 minutes. When `false`, every departure has
+  `status: "scheduled"` and `expected` / `delay_seconds` are `null`.
+- `status`: `live` — a fresh event matched (`expected` and `delay_seconds` set; `delay_seconds` may be negative
+  or 0); `canceled` — the trip or this stop is cancelled / skipped (`expected` and `delay_seconds` are `null`);
+  `scheduled` — no fresh event (`expected` and `delay_seconds` are `null`).
+- `headsign`: stop headsign, then trip headsign, then the last stop name. `platform_code`: GTFS `platform_code`
+  or stop `code`, `null` when neither is set.
+- An empty `departures` list is a valid answer (`200`), e.g. at night.
+- Response header `Cache-Control: max-age=15`.
+- Errors: unknown city or stop → `404 not_found`.
 
 ## Assistant (#18)
 

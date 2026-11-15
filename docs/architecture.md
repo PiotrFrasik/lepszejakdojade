@@ -120,7 +120,7 @@ What the ZTP feeds contain (as observed):
 
 | Feed | Available | Missing |
 |---|---|---|
-| Tram trip updates | trip id, stop id, absolute times, vehicle id | start date, route id, stop sequence, delay. The static import (#7) is in place, but the collector does not read it yet |
+| Tram trip updates | trip id, stop id, absolute times, vehicle id | start date, route id, stop sequence, delay. The static import (#7) is in place; the collector does not read it, but the departures board joins the two at request time (#73) |
 | Bus trip updates | route id (always), delay and stop sequence (about 14–20% of updates) | Some last-stop departures come with time 0 and delay 0; they are treated as missing |
 
 Volume: about 5,000 stop events per poll in the evening and 10,000 to 17,500 during the day.
@@ -404,12 +404,64 @@ Frontend routes: `/timetable`, `/timetable/lines/:lineId`, `/timetable/lines/:li
 The city is not in the URL. Maps use MapLibre with its worker set explicitly (see
 [decisions](decisions.md#26-maplibre-worker-url-set-explicitly)).
 
-Planned: the stop entry (a stop page without a line) and the departures board (#9, #56).
+The stop page with the departures board is built (#73, see [Live departures](#live-departures-implemented-73-74)).
+Planned: the list of lines at a stop (#56).
 
-### Live departures and vehicles (planned, #20, #21)
+### Live departures (implemented, #73, #74)
 
-The realtime `StopEvent` data (#6) and vehicle positions feed the departures and live map
-endpoints. Delay statistics (#22) and predictions (#23) are built on the same rows.
+`GET /api/v1/cities/{city}/stops/{stop_id}/departures/` is in `backend/timetable/departures.py`. It joins
+the static timetable (#7) with the realtime `StopEvent` rows (#6). Contract: [api.md](api.md#departures-73).
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (stop departures board)
+    participant B as Backend (timetable app)
+    participant P as PostgreSQL (GTFS tables, StopEvent)
+
+    U->>F: open /timetable/stops/:stopId
+    loop 30 s after the previous response, paused when the tab is hidden
+        F->>B: GET .../stops/{stop_id}/departures/?limit=
+        B->>P: active versions: scheduled calls of the stop group
+        B->>P: StopEvent rows seen in the last 5 min
+        P-->>B: rows
+        B-->>F: departures, realtime_available (Cache-Control 15 s)
+    end
+    F-->>U: expected vs scheduled, live marker; timetable only after 5 min without fresh data
+```
+
+Rules the endpoint and the board follow:
+
+- **Stop group.** The board covers the same stop group as stop search: platforms with the same name within
+  300 m (`stops.group_of_platform`).
+- **Static first.** Scheduled departures come from the active static GTFS. Live times are added where an event
+  matches a scheduled call.
+- **Matching.** An event matches by trip and `stop_sequence`. If either side has no sequence, the stop is the
+  fallback. An event with a different non-null sequence never matches, so loop trips do not take the wrong time
+  ([decision 37](decisions.md#37-live-events-match-by-stop-sequence-with-a-stop-fallback)).
+- **Delay.** When the feed gives both a time and a delay, the feed's values are used. A delay of 0 from ZTP is
+  shown as live "on time", because ZTP predicts every upcoming stop
+  ([decision 36](decisions.md#36-ztp-delay-0-is-shown-as-live-on-time)).
+- **Status.** `live`, `scheduled` or `canceled`. Only skipped stops are `canceled` (see Limits below).
+- **Freshness.** Live data counts when a poll in the last 5 min succeeded. A `FeedFetch` with status `ok` or
+  `unchanged` is fresh ([decision 35](decisions.md#35-unchanged-feed-polls-count-as-fresh)). Without fresh data,
+  `realtime_available` is false and the board is timetable only.
+- **City config.** Each `gtfs_rt` feed with entity `trip_updates` has `static_feed`, the id of the `gtfs_static`
+  feed whose trip ids it uses. It is required when `realtime.departures: true` and checked at startup in
+  `cities/registry.py`. Matching is scoped to that pair, because Kraków tram and bus trip ids share a pattern
+  ([decision 38](decisions.md#38-realtime-feeds-link-to-one-static-feed-each)).
+- **Frontend.** The board is at `/timetable/stops/:stopId`, with expected and scheduled times, "+N min",
+  "on time", "cancelled", "in N min" or "now", and a live marker. Polish plural forms (one, few, many) are in
+  vue-i18n. `VITE_DEPARTURES_MOCK=true` gives a dev-only mock; it is not in production builds.
+- **Limits.** The collector drops whole-trip cancellations, so only skipped stops show as cancelled. Trips from
+  `frequencies.txt` are not expanded. Warsaw has no realtime data. The central stop responds in 0.6 to 0.8 s.
+- **Follow-ups.** Index and performance tuning for the `StopEvent` lookup. The collector should keep
+  whole-trip cancellations.
+
+### Live vehicles (planned, #20, #21)
+
+Vehicle positions and the live map are planned. Delay statistics (#22) and predictions (#23) will be built on
+the same `StopEvent` rows.
 
 ### AI chat assistant (implemented, #18, #19)
 
@@ -442,7 +494,7 @@ sequenceDiagram
   with `urllib`. The model is set by `GEMINI_MODEL` (default `gemini-flash-latest`), the key by `GEMINI_API_KEY`.
 - **Tools.** Six read-only tools: `search_stops`, `plan_journey`, `next_departures`, `list_lines`,
   `get_line_route` and `get_stop_timetable`. They call the existing timetable and journey services.
-  Tickets and live data are not tools yet (planned).
+  Tickets and live times are not tools yet (planned). `next_departures` uses the static timetable only.
 - **Cards.** `journey`, `departures` and `stops` cards are built by the server from tool results of the
   current turn, never from model text.
 - **Language.** The answer uses the `Accept-Language` language (see
@@ -457,7 +509,7 @@ sequenceDiagram
   [Accept-Language](decisions.md#33-chat-language-comes-from-accept-language) and
   [per-departure `stop_id`](decisions.md#34-departures-cards-carry-a-stop_id-per-departure).
 
-Planned follow-ups: a shared Redis cache and proxy setting for the throttle; assistant variables in
+Planned follow-ups: live times for `next_departures` (use the live departures service); a shared Redis cache and proxy setting for the throttle; assistant variables in
 `docker-compose.yml` and `.env.example`; a normal answer instead of `503` for blocked prompts; a departures index
 for Warsaw; the limit applied before filtering departures; cards that do not bypass the endpoint serializers.
 
@@ -477,6 +529,14 @@ for Warsaw; the limit applied before filtering departures; cards that do not byp
 - Status per feed: `ok`, `unchanged`, `stale`, `http_error`, `network_error`, `parse_error`,
   `error`. Check them in the Django admin (read-only views of `FeedFetch` and `StopEvent`).
 - Command options are in the [README](../README.md#realtime-data-collector).
+
+## Operating the departures board
+
+- The board works without live data. If the collector is stopped or a city has no realtime feed, it shows the
+  timetable only.
+- Live times need `celery-beat` and `celery-worker` running. The collector runs only while the local stack is up.
+- A city with `realtime.departures: true` must give every `trip_updates` feed a `static_feed`. Without it, the
+  backend does not start.
 
 ## Operating the static import
 

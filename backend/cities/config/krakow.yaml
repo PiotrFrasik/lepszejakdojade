@@ -91,43 +91,55 @@ feeds:
       url: https://mkuran.pl/gtfs/polish_trains.zip
       filter:
         bbox: [19.55, 49.88, 20.40, 50.27]
+  # `static_feed` (optional): the gtfs_static feed whose trip and stop ids the realtime feed
+  # uses. Live departures match realtime data to the timetable only through this link (tram
+  # and bus trip ids share one pattern, so the feed pair must be explicit).
   gtfs_rt:
     # checked 2026-11-14
     - id: ztp_tram_vehicle_positions
       entity: vehicle_positions
       url: https://gtfs.ztp.krakow.pl/VehiclePositions_T.pb
+      static_feed: ztp_tram
     # checked 2026-11-14
     - id: ztp_tram_trip_updates
       entity: trip_updates
       url: https://gtfs.ztp.krakow.pl/TripUpdates_T.pb
+      static_feed: ztp_tram
     # checked 2026-11-14
     - id: ztp_tram_service_alerts
       entity: service_alerts
       url: https://gtfs.ztp.krakow.pl/ServiceAlerts_T.pb
+      static_feed: ztp_tram
     # checked 2026-11-14
     - id: ztp_bus_vehicle_positions
       entity: vehicle_positions
       url: https://gtfs.ztp.krakow.pl/VehiclePositions_A.pb
+      static_feed: ztp_bus
     # checked 2026-11-14
     - id: ztp_bus_trip_updates
       entity: trip_updates
       url: https://gtfs.ztp.krakow.pl/TripUpdates_A.pb
+      static_feed: ztp_bus
     # checked 2026-11-14
     - id: ztp_bus_service_alerts
       entity: service_alerts
       url: https://gtfs.ztp.krakow.pl/ServiceAlerts_A.pb
+      static_feed: ztp_bus
     # checked 2026-11-14
     - id: ztp_mobilis_vehicle_positions
       entity: vehicle_positions
       url: https://gtfs.ztp.krakow.pl/VehiclePositions_M.pb
+      static_feed: ztp_mobilis_bus
     # checked 2026-11-14
     - id: ztp_mobilis_trip_updates
       entity: trip_updates
       url: https://gtfs.ztp.krakow.pl/TripUpdates_M.pb
+      static_feed: ztp_mobilis_bus
     # checked 2026-11-14
     - id: ztp_mobilis_service_alerts
       entity: service_alerts
       url: https://gtfs.ztp.krakow.pl/ServiceAlerts_M.pb
+      static_feed: ztp_mobilis_bus
   other: []
 
 # PLACEHOLDER: real zone boundaries come with the ticket catalogue (#14).

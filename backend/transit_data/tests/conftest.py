@@ -108,6 +108,8 @@ def city_config(tmp_path, settings):
         (tmp_path / name).write_text((real / name).read_text(encoding="utf-8"), encoding="utf-8")
     data = yaml.safe_load((real / "krakow.yaml").read_text(encoding="utf-8"))
     data["id"] = "testville"
+    # No static feeds to link to; the collector does not read this flag.
+    data["realtime"] = {"departures": False, "vehicles": False}
     data["timezone"] = "Europe/Warsaw"
     data["feeds"] = {
         "gtfs_static": [],
