@@ -20,6 +20,44 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Timetable browser — 2026-11-15
+**Issues / PRs:** #10, #11 (PRs: pending); #56 split off from #11 (new, not started)
+**Branches:** feat/10-timetable-endpoints, feat/11-timetable-browser; integration worktree `integration/timetable-11` for the manual test
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Scoped the session to #10 and #11. The stop entry moved to #56 (depends on #9) because of the 2026-11-15 deadline. Wrote the contract in `docs/api.md` first. Agents read it from the main checkout, because worktrees do not see uncommitted files. Updated the contract during the work: white and black colour rule, `direction_id` null counts as 0, `code`, `lat` and `lon` nullable, last stop excluded, frequency expansion, default direction = lowest existing, date lower bound. Found the MapLibre worker problem in a browser smoke test. | Done. |
+| backend (#10) | New `timetable` app. Line groups in the city YAML with validation. Calendar and day types, including the holiday rule. Variants (main, short_turn, depot, other) via SQL `array_agg`. Transfers within 300 m. Frequency expansion. Checked on real Kraków and Warsaw data in a separate DB (`ljd_timetable`): 20–110 ms per request, no N+1. Fixes: colour rule, blank-headsign fallback, review fixes. | Done. |
+| frontend (#11) | Tabs. Line grid with groups and search. Line page with direction toggle, diagram, route map. Stop timetable with three columns, markers and legend, date picker, trip dialog, print CSS. Polish and English. Fixes after review and after the MapLibre fix below. | Done. |
+| tester (#10) | Backend 199 + 13 new tests (fictional city `ttville`). Full backend suite 1095 passed. | Passing. |
+| tester (#11) | Frontend 100 + 12 new tests. Full frontend suite 235 passed. | Passing. |
+| reviewer (#10) | Rounds: 1. | APPROVED with 5 should-fix. Fixed: date lower bound and default direction. Added an OpenAPI schema test. The Warsaw holiday rule is left to the manual check. |
+| reviewer (#11) | Rounds: 1. | APPROVED with 8 should-fix. 6 fixed (listed below). |
+
+**Review findings that mattered:**
+- Backend, tester: a blank headsign had no fallback. Fixed (headsign falls back to the last stop name).
+- Backend, colour rule: `FFFFFF` and `000000` route colours treated as unset. Fixed.
+- Backend, reviewer: date lower bound changed from 500 to 400. Default direction fixed.
+- Frontend, reviewer, fixed: the opposite-direction notice was lost; controls unmounted on reload; the next departure after midnight was wrong; duplicate keys; the direction switch was not abortable; the opposite-direction button stayed visible after a 404.
+- Frontend, coordinator (browser smoke test): MapLibre's worker failed to load under Vite, so GeoJSON layers did not render. Fixed with `setWorkerUrl`. Unit tests mock MapLibre and did not catch it.
+
+**Manual test (maintainer):** OK, on the integration worktree.
+
+**Problems and lessons:**
+- Vite pre-bundling breaks MapLibre's worker URL. It is only visible in a real browser. Run a browser smoke test before the manual gate.
+- The path hook blocks code agents from editing tests. Test updates after a fix go back to `tester`.
+- The backend image lacked `django-modeltranslation`. It needed a rebuild with `--build`.
+- Windows refused host port 5432. `DB_PORT` and `REDIS_PORT` overrides (55432, 56379) were used.
+
+**Follow-ups:**
+- #56 and #9 next, for the timetable (stop entry and departures board).
+- City in timetable URLs.
+- `opposite_stop` and `long_name` in the contract, to drop an extra request.
+- Trip identity for frequency-based runs.
+- Precomputed stop-to-routes table (data agent).
+- Verify the holiday rule on Warsaw data when a weekday holiday falls in the feed window.
+- Drop the `ljd_timetable` database after merge.
+
 ## National rail GTFS — 2026-11-14
 **Issues / PRs:** #43, #53 (PRs: pending)
 **Branches:** feat/43-national-rail-gtfs, ci/53-osmium-in-ci
