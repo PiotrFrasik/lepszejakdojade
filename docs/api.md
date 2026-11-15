@@ -48,14 +48,15 @@ Content-Language: en
 | Area | Method & path |
 |---|---|
 | Cities | `GET /cities/`, `GET /cities/{city}/` |
-| Stops | `GET /cities/{city}/stops/?q=&lat=&lon=&radius=` |
+| Stops search (implemented, #59) | `GET /cities/{city}/stops/?q=` |
+| Stops near a point (planned) | `GET /cities/{city}/stops/?lat=&lon=&radius=` |
 | Stop overview | `GET /cities/{city}/stops/{stop_id}/` (lines at the stop, next departures) |
 | Departures | `GET /cities/{city}/stops/{stop_id}/departures/?limit=` |
 | Lines (implemented, #10) | `GET /cities/{city}/lines/?vehicle_type=tram\|bus\|metro\|rail` |
 | Line diagram (implemented, #10) | `GET /cities/{city}/lines/{line_id}/route/?direction=0\|1` |
 | Stop timetable (implemented, #10) | `GET /cities/{city}/lines/{line_id}/stops/{stop_id}/timetable/?direction=&date=` |
 | Trip (implemented, #10) | `GET /cities/{city}/trips/{trip_id}/?date=` |
-| Journeys | `POST /cities/{city}/journeys/search/` |
+| Journeys (implemented, #12) | `POST /cities/{city}/journeys/search/` |
 | Vehicles (live) | `GET /cities/{city}/vehicles/?bbox=` |
 | Alerts | `GET /cities/{city}/alerts/?line=` |
 | Delay stats | `GET /cities/{city}/lines/{line_id}/delay-stats/?stop_id=` |
@@ -273,3 +274,95 @@ One trip on one service date (trip view after clicking a minute). `404` if the t
 ```
 - `wheelchair_accessible`: `true` / `false` / `null`. `arrival` / `departure` are `null` when GTFS has no time for
   that stop.
+
+## Journeys (#12) and stop search (#59)
+
+### `GET /api/v1/cities/{city}/stops/?q=` (#59, part of #9)
+Stop name search for the journey form autocomplete. No auth. Active static GTFS feeds of the city only.
+- `q`: required, at least 2 characters after trimming; case- and Polish-diacritics-insensitive
+  (`plac` matches `Plac`, `zabl` matches `Żabłocie`). Prefix matches of any word rank before other substring matches,
+  then by name. Shorter `q` → `400 validation_error`.
+- **Grouped by name:** platforms with the same name within 300 m are one result. Not paginated, at most 20 results.
+```json
+[
+  { "stop_id": "ztp_tram:stop_376_47501", "name": "Bagatela", "lat": 50.0606, "lon": 19.9330,
+    "vehicle_types": ["tram", "bus"], "stop_ids": ["ztp_tram:stop_376_47501", "ztp_bus:stop_376_47502"] }
+]
+```
+- `stop_id`: a representative platform (the one closest to the group centroid); `lat` / `lon`: the group centroid.
+- `stop_ids`: all platforms of the group. `vehicle_types`: subset of `tram`, `bus`, `metro`, `rail` serving the group.
+
+### `POST /api/v1/cities/{city}/journeys/search/` (#12)
+Journey planning A→B through the city's OpenTripPlanner 2 instance (`OTP_URL_KRAKOW` or `OTP_URL_WARSZAWA`). No auth.
+No rate limit yet (planned before public deployment).
+Request:
+```json
+{
+  "from": { "stop_id": "ztp_tram:stop_376_47501" },
+  "to": { "lat": 50.0215, "lon": 19.8900 },
+  "time": "2026-11-16T08:00:00+01:00",
+  "time_mode": "depart",
+  "preferences": { "fewer_transfers": false, "less_walking": false, "wheelchair": false }
+}
+```
+- `from` / `to`: exactly one of `{ "stop_id" }` (any id from stop search, incl. `stop_ids`) or `{ "lat", "lon" }`.
+  Optional `name` (string) is echoed back as the place label. Points outside the city's bounding box → `400`.
+- `time`: optional, defaults to now; `time_mode`: `depart` (default) or `arrive`.
+- `preferences`: all optional, default `false`. `fewer_transfers` and `less_walking` raise OTP's transfer and walk
+  reluctance; `wheelchair` makes OTP prefer wheelchair-accessible trips and stops (inaccessible ones are penalised,
+  not excluded).
+- Same `from` and `to`, unknown `stop_id`, bad types → `400 validation_error` with `details`.
+
+Response `200 OK`:
+```json
+{
+  "from": { "name": "Bagatela", "lat": 50.0606, "lon": 19.9330 },
+  "to": { "name": null, "lat": 50.0215, "lon": 19.8900 },
+  "itineraries": [
+    {
+      "id": "i1",
+      "start": "2026-11-16T08:03:00+01:00",
+      "end": "2026-11-16T08:31:00+01:00",
+      "duration": 1680,
+      "transfers": 1,
+      "walk_distance": 640,
+      "walk_duration": 520,
+      "legs": [
+        {
+          "mode": "walk",
+          "start": "2026-11-16T08:03:00+01:00", "end": "2026-11-16T08:07:00+01:00",
+          "duration": 240, "distance": 300,
+          "from": { "name": "Bagatela", "stop_id": null, "lat": 50.0606, "lon": 19.9330 },
+          "to": { "name": "Teatr Bagatela", "stop_id": "ztp_tram:stop_1", "lat": 50.0610, "lon": 19.9325 },
+          "line": null, "headsign": null, "trip_id": null, "intermediate_stops": [],
+          "geometry": { "type": "LineString", "coordinates": [[19.9330, 50.0606], [19.9325, 50.0610]] }
+        },
+        {
+          "mode": "tram",
+          "start": "2026-11-16T08:07:00+01:00", "end": "2026-11-16T08:20:00+01:00",
+          "duration": 780, "distance": 4100,
+          "from": { "name": "Teatr Bagatela", "stop_id": "ztp_tram:stop_1", "lat": 50.0610, "lon": 19.9325 },
+          "to": { "name": "Czerwone Maki P+R", "stop_id": "ztp_tram:stop_9", "lat": 50.0170, "lon": 19.8890 },
+          "line": { "id": "ztp_tram:52", "short_name": "52", "vehicle_type": "tram", "group": "day",
+                    "colour": "#1f6feb", "text_colour": "#ffffff" },
+          "headsign": "Czerwone Maki P+R",
+          "trip_id": "ztp_tram:trip_3",
+          "intermediate_stops": [ { "name": "Batorego", "stop_id": "ztp_tram:stop_2" } ],
+          "geometry": { "type": "LineString", "coordinates": [[19.9325, 50.0610], [19.8890, 50.0170]] }
+        }
+      ]
+    }
+  ],
+  "comparison": { "walk": { "duration": 3900, "distance": 5200 }, "bike": { "duration": 1260, "distance": 5600 } }
+}
+```
+- `itineraries`: at most 5, sorted by arrival time (`depart`) or by departure time descending (`arrive`). Empty list
+  (still `200`) when OTP finds no route.
+- `mode`: `walk`, `tram`, `bus`, `metro`, `rail`. `line` is the timetable "line summary" (ids `{feed_id}:{gtfs_id}`
+  as in the timetable API, so the client can link to the timetable) and `null` for walking legs.
+- `transfers`: transit legs − 1 (min 0). `walk_distance` / `walk_duration`: sums over walking legs.
+- `geometry`: GeoJSON LineString, coordinates `[lon, lat]` (decoded from OTP's polyline).
+- `comparison`: direct walk and bike (OTP street routing, no transit) between the same points; each is `null` when
+  OTP finds no such route or it would take more than 3 hours.
+- Errors: unknown city → `404`; city without OTP configured or OTP unreachable / timing out (10 s) / returning an error
+  → `503` with code `journey_planner_unavailable` (message translated). OTP internals are never passed to the client.

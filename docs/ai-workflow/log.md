@@ -20,6 +20,42 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Journey search — 2026-11-15
+**Issues / PRs:** #12, #13, #59 (PRs: pending)
+**Branches:** feat/12-journey-search-endpoint, feat/13-journey-search-ui, feat/59-stop-search; integration worktree `integration/journeys` for the manual test
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Wrote the contract for #12 and #59 in `docs/api.md` first (uncommitted) and passed the paths to the agents. Built the integration worktree by applying the three uncommitted diffs; `.po` conflicts were resolved by hand and `.mo` recompiled. | Done. |
+| backend (#12) | New `journeys` app: OTP GraphQL client on `urllib`, polyline decoding, parallel transit, walk and bike queries, stop ids resolved to coordinates, modes limited to the city's vehicle types, bbox check, line summary reused from the timetable. | Done. 67 journeys tests; full suite passing. |
+| backend (#59) | `GET /cities/{city}/stops/?q=` in `timetable/stops.py`: in-memory matching without diacritics, word-prefix ranking, grouping within 300 m, max 20, 24 h cache keyed by active feed versions. No `unaccent` migration. | Done. Checked on real Warsaw data: no platform codes in stop names, so grouping works. |
+| frontend (#13) | Home map with a floating panel (desktop) or top panel and bottom tab bar (phone); `/journey` redirects to `/`. Stop autocomplete, map picking, my location, swap, depart or arrive time, preferences, results with route on the map, walk and bike comparison, error states (503, 429, network, 400). The Pinia store keeps the search across navigation. | Done. Vitest 329/329 passing. |
+| reviewer (#12) | APPROVED. | Should-fix done: `http.client.HTTPException` now returns 503. |
+| reviewer (#13) | APPROVED. | Fixed: stale selection after Enter, results cleared on place change, generic 400 message, focus handling in map picking. |
+| reviewer (#59) | APPROVED. | Should-fix listed: `q` max length, Redis as Django cache (devops), make `_routes_at_stops` public. Status not recorded. |
+
+**Review findings that mattered:**
+- #13: a stale selection could be used after Enter, and results stayed after the place changed. Both fixed.
+- #12: an `http.client` error was not mapped to 503. Fixed.
+- #59: the reviewer asked for a `q` length limit and for Redis as the Django cache, which is a devops task.
+
+**Manual test (maintainer):** OK, approved, on the `integration/journeys` worktree (2026-11-15).
+
+**Problems and lessons:**
+- The path hook blocked the backend and frontend agents from writing tests and `docs/api.md`. The tester and the coordinator wrote them, and the agents spent time on temporary specs. The guard works as intended, but it costs a round trip.
+- Copying `.env` into the integration worktree was denied for the coordinator, so Piotr ran the stack.
+- Applying the three uncommitted diffs to one worktree gave `.po` conflicts, resolved by hand, and the `.mo` files were recompiled.
+
+**Follow-ups:**
+- Address geocoding (planned; needs its own decision record).
+- Rate limit on the journey endpoint (`AnonRateThrottle`) before public deployment.
+- Show the date on result times for other days.
+- Strict wheelchair option.
+- Tests for the four frontend fix-round behaviours.
+- #59 should-fixes: `q` max length, Redis as Django cache (devops), public `_routes_at_stops`.
+- #13 should-fix left: skeleton colour tokens.
+- #51: nightly OTP graph rebuilds.
+
 ## Timetable browser — 2026-11-15
 **Issues / PRs:** #10, #11 (PRs: pending); #56 split off from #11 (new, not started)
 **Branches:** feat/10-timetable-endpoints, feat/11-timetable-browser; integration worktree `integration/timetable-11` for the manual test

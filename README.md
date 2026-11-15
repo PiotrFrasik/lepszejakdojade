@@ -4,7 +4,8 @@ Public transport web app for Kraków and Warsaw. It is in early development: the
 (containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
 A realtime collector for Kraków trip updates has started and stores data in the database.
 Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
-shows them. Journey planning, the stop view, tickets, live departures and the AI assistant are planned.
+shows them. Journey planning A→B is built on the home page. The stop view, tickets, live departures and
+the AI assistant are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -14,8 +15,11 @@ The app is bilingual (Polish / English) with a language switcher.
 - **Timetable browser** (built, #10, #11): lines grouped by type, line diagram with a route map, stop
   timetables for weekdays, Saturdays and Sundays/holidays, and a trip view. Routes are in
   [Timetable browser](#timetable-browser).
-- **Planned:** journey planning (#12), live departures and vehicles (#20, #21), delay statistics and
-  predictions (#22, #23), tickets (demo), AI assistant (#18, #19).
+- **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
+  my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
+  a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
+- **Planned:** live departures and vehicles (#20, #21), delay statistics and predictions (#22, #23),
+  tickets (demo), AI assistant (#18, #19).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
 
@@ -44,7 +48,8 @@ Stop the stack with `docker compose down`.
 
 OpenTripPlanner (OTP) is the journey engine. It runs one instance per city, and each instance serves
 one graph built from that city's timetables and map. OTP is not started by `docker compose up`.
-The app does not call OTP yet; the journeys endpoint is planned (#12).
+Journey search (#12) calls the city's OTP instance. With no OTP service running, the journey search
+returns an error (503).
 
 Build a city's graph, then start its service:
 
@@ -190,6 +195,17 @@ Built on the active static GTFS versions (see [Static timetables](#static-timeta
   Contract: [docs/api.md](docs/api.md#timetable-10).
 - Backend app: `backend/timetable/`. Frontend: `frontend/src/views/timetable/`.
 
+## Journey planning
+
+Built on the OTP graphs (see [OpenTripPlanner graphs](#opentripplanner-graphs)). No login.
+
+- Page: `/` (home, full-screen map with the journey panel). `/journey` redirects to `/`.
+- API: `GET /api/v1/cities/{city}/stops/?q=` (stop search, #59) and
+  `POST /api/v1/cities/{city}/journeys/search/` (#12). Contract: [docs/api.md](docs/api.md#journeys-12-and-stop-search-59).
+- Backend apps: `backend/journeys/` (OTP client, itineraries) and `backend/timetable/stops.py` (stop search).
+  Frontend: `frontend/src/components/journey/`, `frontend/src/stores/journey.ts`.
+- Flow and rules: [docs/architecture.md](docs/architecture.md#journey-search-implemented-12-13).
+
 ## Tests
 
 ```bash
@@ -239,6 +255,11 @@ not secrets.
 - National rail has static timetables only. There is no realtime data for it yet.
 - Timetable browser: frequency-based trips show the template trip's times in the trip view. The stop
   entry (a stop page without a line) and the departures board are planned (#9, #56).
+- Journey planning: there is no address search. Points are stops, map picks or my location (#13).
+- Journey planning: no rate limit yet. It is needed before public deployment.
+- Journey planning: the results show times without a date when the trip is on another day. The wheelchair
+  preference does not exclude inaccessible trips.
+- Journey planning: journeys use the timetable graph only. Realtime delays are not in the journey results.
 - OTP graphs are rebuilt by hand. A graph built before the rail feed was added has no national rail
   until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
   realtime updates.
@@ -247,7 +268,7 @@ not secrets.
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/, journeys/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log

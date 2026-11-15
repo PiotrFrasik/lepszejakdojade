@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "cities",
     "transit_data",
     "timetable",
+    "journeys",
 ]
 
 MIDDLEWARE = [
@@ -173,6 +174,16 @@ OTP_DATA_DIR = Path(env_str("OTP_DATA_DIR") or BASE_DIR.parent / "otp" / "data")
 OTP_OSMIUM_BIN = env_str("OTP_OSMIUM_BIN").strip() or "osmium"
 # Buffer (km) added around the GTFS stops' bounding box when clipping the OSM extract.
 OTP_BBOX_BUFFER_KM = env_float("OTP_BBOX_BUFFER_KM", 3.0, min_value=0)
+
+# Journey planning (journeys app): OTP request timeout and how the user preferences translate
+# to OTP routing parameters. Defaults of the other parameters live in otp/config/router-config.json.
+OTP_TIMEOUT_SECONDS = env_float("OTP_TIMEOUT_SECONDS", 10.0, min_value=1)
+# "fewer_transfers": extra cost per transfer (seconds of equivalent travel time).
+JOURNEY_FEWER_TRANSFERS_COST = 900
+# "less_walking": walk reluctance (OTP default in router-config.json is 2.0).
+JOURNEY_LESS_WALKING_RELUCTANCE = 5.0
+# Direct walk / bike comparisons longer than this (seconds) are returned as null.
+JOURNEY_COMPARISON_MAX_DURATION = 3 * 3600
 
 # Timeout (seconds) for dependency checks in the health endpoint
 HEALTH_CHECK_TIMEOUT = 2

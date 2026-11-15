@@ -510,3 +510,76 @@ render in the browser. Unit tests mock MapLibre, so they did not catch it.
 exists for the line. `0` is used when it exists.
 
 **Consequences.** A line with only direction `1` opens on `1`. Trips without `direction_id` count as `0`.
+
+---
+
+## 28. OpenTripPlanner is queried with GraphQL through the standard library
+
+**Status:** accepted (2026-11-15, #12)
+
+**Context.** Journey search needs three GraphQL `planConnection` queries (transit, walk, bike) per request, to one
+OTP endpoint, `/otp/gtfs/v1`.
+
+**Decision.** `backend/journeys/otp.py` posts the queries with Python's `urllib`. The timeout is
+`OTP_TIMEOUT_SECONDS` (10 s). Any failure (network, timeout, HTTP error, bad response) becomes `503
+journey_planner_unavailable`, and OTP's messages are not returned to the client. The three queries run in parallel
+in `services.py`.
+
+**Alternatives.** A GraphQL client library. The reasons it was not chosen are not recorded here.
+
+**Consequences.**
+- No new dependency.
+- Every failure gives the same `503` to the client, so the client cannot tell a timeout from an OTP error.
+
+## 29. Stop search is in memory, with diacritics folding
+
+**Status:** accepted (2026-11-15, #59)
+
+**Context.** The journey form needs stop-name autocomplete. Users type names without Polish diacritics (`zabl`
+for `Żabłocie`). A PostgreSQL `unaccent` extension would need a migration. That migration belongs to the data
+agent's area, and was not part of this feature.
+
+**Decision.** `GET /cities/{city}/stops/?q=` matches in Python, in `backend/timetable/stops.py`. Names are compared
+without diacritics, `ł` is folded to `l`, and word-prefix matches rank first. Platforms with the same name within
+300 m are one result, at most 20 results. The stop list is cached for 24 h, keyed by the active feed versions.
+
+**Alternatives.** A PostgreSQL search with `unaccent` or a trigram index, as a migration. Not chosen for this
+feature; the reasons are not recorded here.
+
+**Consequences.**
+- The stop list of a city is held in the cache for 24 h. Memory use under load is not measured.
+- A new import starts a new cache entry, so search does not use the old version's stops.
+- Revisit with a database search if the memory cost or the ranking needs grow.
+- Redis is not yet the Django cache backend (follow-up, devops).
+
+## 30. Wheelchair is a preference, not a filter
+
+**Status:** accepted (2026-11-15, #12)
+
+**Context.** Users who need step-free trips want them first. Excluding every inaccessible stop or trip could leave
+no route. Some GTFS stops have unknown wheelchair boarding (`wheelchair_boarding` is `null`).
+
+**Decision.** The `wheelchair` preference makes OTP prefer accessible trips and stops. The OTP router config sets
+`onlyConsiderAccessible` to false, so inaccessible options are penalised, not removed.
+
+**Alternatives.** A strict option that excludes inaccessible options. Not built; it is a follow-up.
+
+**Consequences.**
+- An itinerary can still use an inaccessible stop or vehicle. The response does not flag this yet.
+- A strict wheelchair option is a separate, later change.
+
+## 31. No address geocoding in the MVP
+
+**Status:** accepted (2026-11-15, #13)
+
+**Context.** Journey points can be a stop, a map point or the user's location. Typing a street address needs a
+geocoder, which is an extra external service with its own terms and cost.
+
+**Decision.** The MVP has no address search. `from` and `to` are stops from the stop search, points picked on the
+map, or the browser's location. The API accepts `{ "stop_id" }` or `{ "lat", "lon" }`.
+
+**Alternatives.** An external geocoding service. Not chosen for the MVP; the reasons are not recorded here.
+
+**Consequences.**
+- Users cannot type a street address. They pick a stop or a point on the map.
+- Address geocoding is a follow-up, and it needs its own decision record when it is added.
