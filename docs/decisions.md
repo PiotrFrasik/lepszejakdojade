@@ -725,3 +725,23 @@ config change would show late.
 - A new import starts a new cache entry. Config changes show at once.
 - Kraków measured: about 1.7 s cold and 52 ms warm. Warsaw not measured locally.
 - Tests for config changes while cached and for unknown route suffixes are a follow-up.
+
+## 40. Ticket suggestion uses single and time tickets only
+
+**Status:** accepted (2026-11-15, #14)
+
+**Context.** The journey page suggests a ticket that covers the trip at the lowest price. A daily or periodic ticket
+is not priced per journey, so it cannot be compared with a single or time ticket. The Kraków "30 minutes or one
+ride" ticket is valid both for a time window and for one ride. The app does not model zones per stop.
+
+**Decision.** The suggestion considers single and time tickets only. The Kraków "30 minutes or one ride" ticket is
+seeded twice, once as a time ticket (30 minutes) and once as a single ticket, so the cheapest rule finds it for both
+kinds of trip. Zones are not modelled per stop. The suggestion uses the city's first zone until #83 adds zones.
+
+**Alternatives.** Not recorded.
+
+**Consequences.**
+- Daily and periodic tickets are not suggested, even when one would be cheaper for a frequent rider.
+- The catalogue lists the Kraków "30 minutes or one ride" ticket twice, once per type.
+- Until #83, the suggested zone can be wrong for stops outside the city's first zone.
+- Warsaw prices in the seed are not verified yet (see the README limitations).

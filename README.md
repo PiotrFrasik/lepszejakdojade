@@ -5,7 +5,8 @@ Public transport web app for Kraków and Warsaw. It is in early development: the
 A realtime collector for Kraków trip updates has started and stores data in the database.
 Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
 shows them. Journey planning A→B is built on the home page. An AI chat assistant answers questions about
-stops, journeys, departures and timetables. A live departures board for Kraków stops is built. Lines at a stop, tickets and live vehicles are planned.
+stops, journeys, departures and timetables. A live departures board for Kraków stops is built. A ticket catalogue
+with a ticket hint under journey results is built. Live vehicles, demo checkout and accounts are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -29,8 +30,10 @@ The app is bilingual (Polish / English) with a language switcher.
   Polish or English for stops, journeys, departures, lines and timetables. Answers come only from app data
   through six read-only tools. Journeys, departures and stops are shown as cards. Details are in
   [AI chat assistant](#ai-chat-assistant).
-- **Planned:** live vehicles (#20, #21), nearby stop search and colloquial stop names (#77), delay statistics and predictions (#22, #23),
-  tickets (demo).
+- **Tickets** (built, #14, #82): the ticket catalogue per city at `/tickets`, and a ticket hint under journey
+  results. Routes are in [Tickets](#tickets). API: [docs/api.md](docs/api.md#tickets-14).
+- **Planned:** live vehicles (#20, #21), nearby stop search and colloquial stop names (#77), delay statistics and
+  predictions (#22, #23), demo ticket checkout and accounts (#16, #17).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
 
@@ -250,6 +253,24 @@ Built on the OTP graphs (see [OpenTripPlanner graphs](#opentripplanner-graphs)).
   Frontend: `frontend/src/components/journey/`, `frontend/src/stores/journey.ts`.
 - Flow and rules: [docs/architecture.md](docs/architecture.md#journey-search-implemented-12-13).
 
+## Tickets
+
+The ticket catalogue of each city, and a ticket suggestion under the journey results. No login. Buying tickets
+is not built yet (#16, #17).
+
+- Page: `/tickets` (the catalogue). The journey results show a ticket hint.
+- API: `GET /api/v1/cities/{city}/tickets/?reduced=true|false` (catalogue) and
+  `POST /api/v1/cities/{city}/tickets/suggest/` (suggestion). Contract: [docs/api.md](docs/api.md#tickets-14).
+- Backend app: `backend/tickets/`. The `Ticket` model has a name and a description in Polish and English
+  (django-modeltranslation). The Django admin has language tabs for them. Migration `0002` seeds the Kraków and
+  Warsaw tickets.
+- The suggestion considers single and time tickets only. Zones are not modelled per stop yet: it uses the city's
+  first zone (#83). See [decision 40](docs/decisions.md#40-ticket-suggestion-uses-single-and-time-tickets-only).
+- Frontend: `TicketsView` and `TicketHint`. Prices are formatted from decimal strings, not floats.
+- Development: `VITE_TICKETS_MOCK=true|empty|fail|offline` replaces the API with a mock. The `empty`, `fail` and
+  `offline` values are for testing the empty, error and offline states.
+- Design: [docs/architecture.md](docs/architecture.md#tickets-implemented-14-82).
+
 ## AI chat assistant
 
 The assistant is the `assistant` Django app (`POST /api/v1/assistant/chat/`) and the chat UI in the frontend.
@@ -334,6 +355,11 @@ not secrets.
 - OTP graphs are rebuilt by hand. A graph built before the rail feed was added has no national rail
   until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
   realtime updates.
+- Tickets (#14, #82): Warsaw prices come from memory and are not yet checked against the ZTM source. The
+  source URL is also to be verified.
+- Tickets: zones per stop are not modelled. The suggestion uses the city's first zone (#83).
+- Tickets: the suggestion considers single and time tickets only. Daily and periodic tickets are not suggested.
+- Tickets: no purchase, accounts or QR tickets yet (#16, #17). The assistant has no ticket tool yet.
 - Data sources page (#25, #29): it shows the licence name and link, not the full licence text.
   `docs/data-sources.md` is still planned.
 - AI assistant: the rate limit uses the connection IP and no proxy setting (`NUM_PROXIES`), and counters are
@@ -345,7 +371,7 @@ not secrets.
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/, journeys/, assistant/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/, journeys/, assistant/, tickets/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log
