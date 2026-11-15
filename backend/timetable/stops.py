@@ -133,6 +133,15 @@ def city_groups(city: City, feeds: Feeds) -> list[StopGroup]:
     return groups
 
 
+def group_of_platform(city: City, feeds: Feeds, stop_id: str) -> StopGroup | None:
+    """The stop group containing platform ``stop_id`` (public id), or None when the id is
+    not a named platform of an active feed version."""
+    for group in city_groups(city, feeds):
+        if any(platform.stop_id == stop_id for platform in group.platforms):
+            return group
+    return None
+
+
 def _is_word_prefix(key: str, query: str) -> bool:
     """True when ``query`` starts at the beginning of a word of ``key``."""
     start = key.find(query)

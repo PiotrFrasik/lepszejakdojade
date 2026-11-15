@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
+from django.utils import timezone
+from django.utils.cache import patch_cache_control
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
@@ -16,7 +18,7 @@ from cities.registry import VEHICLE_TYPES, City, get_city
 from cities.views import ACCEPT_LANGUAGE
 from core.serializers import ErrorSerializer
 
-from . import services
+from . import departures, services
 from .lines import Feeds, Line, get_line, get_stop, get_trip, lines_by_pk, list_lines
 from .serializers import (
     DateQuerySerializer,
@@ -24,12 +26,14 @@ from .serializers import (
     LineListItemSerializer,
     LineRouteSerializer,
     LinesQuerySerializer,
+    StopDeparturesQuerySerializer,
+    StopDeparturesSerializer,
     StopSearchQuerySerializer,
     StopSearchResultSerializer,
     StopTimetableSerializer,
     TripSerializer,
 )
-from .stops import search_stops
+from .stops import group_of_platform, search_stops
 
 CITY_PARAM = OpenApiParameter("city", str, OpenApiParameter.PATH, description="City id.")
 LINE_PARAM = OpenApiParameter(
@@ -65,7 +69,22 @@ Q_PARAM = OpenApiParameter(
     description="Stop name fragment, at least 2 characters after trimming; case- and "
     "diacritics-insensitive.",
 )
+LIMIT_PARAM = OpenApiParameter(
+    "limit",
+    int,
+    OpenApiParameter.QUERY,
+    required=False,
+    description=f"Number of departures, 1-{departures.MAX_LIMIT}. "
+    f"Default: {departures.DEFAULT_LIMIT}.",
+)
+PLATFORM_PARAM = OpenApiParameter(
+    "stop_id",
+    str,
+    OpenApiParameter.PATH,
+    description="Any platform id `{feed_id}:{gtfs_id}` of the stop group, URL-encoded.",
+)
 ERRORS = {400: ErrorSerializer, 404: ErrorSerializer}
+DEPARTURES_MAX_AGE = 15
 
 
 def _query(serializer_class: type[Serializer], request: Request) -> dict:
@@ -220,3 +239,29 @@ class StopSearchView(_PublicView):
         params = _query(StopSearchQuerySerializer, request)
         results = search_stops(found, Feeds(found), params["q"])
         return Response(StopSearchResultSerializer(results, many=True).data)
+
+
+class StopDeparturesView(_PublicView):
+    """Next departures at a stop group (all platforms of the requested one), from the static
+    timetable with live times where the city has realtime data."""
+
+    @extend_schema(
+        operation_id="stops_departures",
+        summary="Next departures at a stop",
+        parameters=[CITY_PARAM, PLATFORM_PARAM, LIMIT_PARAM, ACCEPT_LANGUAGE],
+        responses={200: StopDeparturesSerializer, **ERRORS},
+        tags=["timetable"],
+    )
+    def get(self, request: Request, city: str, stop_id: str) -> Response:
+        found = _city(city)
+        params = _query(StopDeparturesQuerySerializer, request)
+        feeds = Feeds(found)
+        group = group_of_platform(found, feeds, stop_id)
+        if group is None:
+            raise NotFound(_("Stop not found."))
+        data = departures.build_departures(
+            found, feeds, group, stop_id, timezone.now(), params["limit"]
+        )
+        response = Response(StopDeparturesSerializer(data).data)
+        patch_cache_control(response, max_age=DEPARTURES_MAX_AGE)
+        return response

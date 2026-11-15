@@ -8,6 +8,9 @@ from rest_framework import serializers
 from cities.registry import VEHICLE_TYPES
 
 from .calendar import DAY_TYPES
+from .departures import DEFAULT_LIMIT as DEFAULT_DEPARTURES_LIMIT
+from .departures import MAX_LIMIT as MAX_DEPARTURES_LIMIT
+from .departures import STATUSES as DEPARTURE_STATUSES
 from .stops import MIN_QUERY_LENGTH
 from .variants import DEPOT, MAIN, OTHER, SHORT_TURN
 
@@ -207,3 +210,43 @@ class StopSearchResultSerializer(serializers.Serializer):
     stop_ids = serializers.ListField(
         child=serializers.CharField(), help_text="All platforms of the group."
     )
+
+
+# ------------------------------------------------------------------ stop departures
+
+
+class StopDeparturesQuerySerializer(serializers.Serializer):
+    limit = serializers.IntegerField(
+        min_value=1, max_value=MAX_DEPARTURES_LIMIT, default=DEFAULT_DEPARTURES_LIMIT
+    )
+
+
+class DeparturesStopSerializer(serializers.Serializer):
+    id = serializers.CharField(help_text="The requested stop id.")
+    name = serializers.CharField()
+    stop_ids = serializers.ListField(
+        child=serializers.CharField(), help_text="All platforms of the stop group."
+    )
+
+
+class StopDepartureSerializer(serializers.Serializer):
+    line = LineSummarySerializer()
+    trip_id = serializers.CharField()
+    headsign = serializers.CharField(allow_blank=True)
+    platform_id = serializers.CharField()
+    platform_code = serializers.CharField(allow_null=True)
+    scheduled = serializers.CharField(help_text="ISO 8601 with offset.")
+    expected = serializers.CharField(
+        allow_null=True, help_text="ISO 8601 with offset; null unless status is live."
+    )
+    delay_seconds = serializers.IntegerField(
+        allow_null=True, help_text="May be negative (early) or 0; null unless status is live."
+    )
+    status = serializers.ChoiceField(choices=DEPARTURE_STATUSES)
+
+
+class StopDeparturesSerializer(serializers.Serializer):
+    stop = DeparturesStopSerializer()
+    generated_at = serializers.CharField(help_text="ISO 8601 with offset, city time zone.")
+    realtime_available = serializers.BooleanField()
+    departures = StopDepartureSerializer(many=True)
