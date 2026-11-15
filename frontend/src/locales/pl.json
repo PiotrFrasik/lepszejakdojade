@@ -65,6 +65,28 @@
   "placeholder": {
     "comingSoon": "Ta sekcja jest w przygotowaniu."
   },
+  "dataSources": {
+    "title": "Źródła danych",
+    "intro": "Rozkłady, przystanki i linie w tej aplikacji pochodzą z otwartych danych publikowanych przez przewoźników i miasta. Poniżej znajdziesz źródła i licencje dla każdego miasta oraz informację o aktualności zaimportowanych danych.",
+    "processedTitle": "Dane przetworzone",
+    "processed": "Dane zostały przetworzone na potrzeby tej aplikacji: przefiltrowane, przekonwertowane i połączone z kilku źródeł. Mogą różnić się od oficjalnych rozkładów jazdy, dlatego wiążące są oficjalne źródła publikowane przez przewoźników.",
+    "loading": "Ładowanie źródeł danych…",
+    "noCities": "Nie skonfigurowano żadnych miast.",
+    "sourcesHeading": "Źródła i licencje",
+    "noSources": "Brak wymienionych źródeł.",
+    "licence": "Licencja:",
+    "freshnessHeading": "Aktualność danych",
+    "noFeeds": "Nie zaimportowano jeszcze żadnych danych.",
+    "feedId": "Identyfikator zbioru",
+    "publisher": "Wydawca",
+    "created": "Utworzone przez wydawcę",
+    "downloaded": "Pobrano",
+    "imported": "Zaimportowano",
+    "servicePeriod": "Obowiązuje",
+    "servicePeriodRange": "{start} – {end}",
+    "unknown": "brak danych",
+    "newTab": "(otwiera się w nowej karcie)"
+  },
   "notFound": {
     "title": "Nie znaleziono strony",
     "message": "Strona, której szukasz, nie istnieje lub została przeniesiona.",

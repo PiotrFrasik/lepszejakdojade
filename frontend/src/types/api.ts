@@ -334,6 +334,47 @@ export interface JourneySearchResponse {
   comparison: JourneyComparison
 }
 
+/** One licence attribution of a city (from city config). Proper names and URLs are not translated. */
+export interface DataSource {
+  name: string
+  url: string
+  /** Licence name, e.g. `CC BY 4.0`; `null` when the config has none. */
+  licence: string | null
+  licence_url: string | null
+  /** In the request language; `null` when the config has none. */
+  description: string | null
+}
+
+/** One active static GTFS feed version: when the data was created, retrieved and imported. */
+export interface DataFeed {
+  feed_id: string
+  /** From `feed_info.txt`; `null` when empty. */
+  publisher_name: string | null
+  /** Publisher's `Last-Modified` (ISO 8601 with offset); `null` when absent or unparsable. */
+  last_modified: string | null
+  /** ISO 8601 with offset. */
+  downloaded_at: string
+  imported_at: string | null
+  service_start_date: ServiceDate | null
+  service_end_date: ServiceDate | null
+}
+
+export interface DataSourcesCity {
+  id: CityId
+  /** In the request language. */
+  name: string
+  /** In city config order. */
+  sources: DataSource[]
+  /** Ordered by `feed_id`; empty when nothing has been imported yet. */
+  feeds: DataFeed[]
+}
+
+/** `GET /api/v1/data-sources/` → `200`. */
+export interface DataSourcesResponse {
+  /** Every configured city, ordered by `id`. */
+  cities: DataSourcesCity[]
+}
+
 // ---------------------------------------------------------------------------
 // Assistant (#18)
 // ---------------------------------------------------------------------------
