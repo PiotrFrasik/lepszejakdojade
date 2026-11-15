@@ -7,6 +7,9 @@ import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import BottomTabBar from '@/components/BottomTabBar.vue'
 import CityPicker from '@/components/CityPicker.vue'
+import ChatPanel from '@/components/assistant/ChatPanel.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
+import { useAssistantStore } from '@/stores/assistant'
 import { useCityStore } from '@/stores/city'
 
 const { t } = useI18n()
@@ -14,7 +17,12 @@ const route = useRoute()
 const cityStore = useCityStore()
 cityStore.init()
 
+const assistant = useAssistantStore()
+
 const fullscreen = computed(() => route.meta.fullscreen === true)
+/** Phone width (where the bottom tab bar shows): the chat panel is a full-screen modal sheet. */
+const isPhone = useMediaQuery('(max-width: 719.98px)')
+const chatModal = computed(() => isPhone.value && assistant.panelOpen)
 
 // Keep the document title in sync with the route and the UI language.
 watchEffect(() => {
@@ -28,7 +36,7 @@ watchEffect(() => {
   <div
     class="app-shell"
     :class="{ 'app-shell--fullscreen': fullscreen }"
-    :inert="cityStore.needsPicker || undefined"
+    :inert="cityStore.needsPicker || chatModal || undefined"
   >
     <a class="skip-link" href="#main-content">{{ t('app.skipToContent') }}</a>
     <AppHeader />
@@ -38,6 +46,7 @@ watchEffect(() => {
     <AppFooter v-if="!fullscreen" />
     <BottomTabBar />
   </div>
+  <ChatPanel v-if="!cityStore.needsPicker" :modal="isPhone" />
   <CityPicker v-if="cityStore.needsPicker" />
 </template>
 

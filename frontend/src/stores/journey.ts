@@ -4,7 +4,7 @@ import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { searchJourneys } from '@/api/client'
 import { DEFAULT_TIME_ZONE } from '@/i18n/format'
 import { useCityStore } from '@/stores/city'
-import type { Itinerary, JourneySearchResponse } from '@/types/api'
+import type { Itinerary, JourneyComparison, JourneyPlace, JourneySearchResponse } from '@/types/api'
 import {
   buildJourneyRequest,
   validateForm,
@@ -203,6 +203,28 @@ export const useJourneyStore = defineStore('journey', () => {
     selectedId.value = null
   }
 
+  /**
+   * Shows a ready-made connection (e.g. from an assistant card) as the search result, with its
+   * end points filled into the form as named points.
+   */
+  function showItinerary(
+    fromPlace: JourneyPlace,
+    toPlace: JourneyPlace,
+    itinerary: Itinerary,
+    comparison: JourneyComparison,
+  ): void {
+    controller?.abort()
+    controller = null
+    from.value = { source: 'map', name: fromPlace.name, lat: fromPlace.lat, lon: fromPlace.lon }
+    to.value = { source: 'map', name: toPlace.name, lat: toPlace.lat, lon: toPlace.lon }
+    problem.value = null
+    picking.value = null
+    error.value = null
+    result.value = { from: fromPlace, to: toPlace, itineraries: [itinerary], comparison }
+    selectedId.value = itinerary.id
+    status.value = 'ready'
+  }
+
   /** Clears everything (used when the city changes: stops and points belong to one city). */
   function reset(): void {
     clearResults()
@@ -249,6 +271,7 @@ export const useJourneyStore = defineStore('journey', () => {
     selectItinerary,
     search,
     clearResults,
+    showItinerary,
     reset,
   }
 })
