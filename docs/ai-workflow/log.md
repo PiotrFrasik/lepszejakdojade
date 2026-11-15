@@ -20,6 +20,41 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Ticket catalogue and suggestion — 2026-11-15
+**Issues / PRs:** #14, #82 (PRs: pending); #83 split off (zones, not started); #17 narrowed to checkout and accounts
+**Branches:** feat/14-ticket-catalogue (backend), feat/82-tickets-ui (frontend)
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Split #17 and created #82 for the catalogue UI; checkout and accounts stay in #17. Wrote the Tickets contract in `docs/api.md` before implementation (uncommitted). Added two contract cases found in review: an empty `?reduced=` counts as omitted, and a city with no `ticket_zones` returns 400 when zones are omitted. Created #83 for zones. Ran backend and frontend in parallel in separate worktrees, reading the contract from the main checkout. For the manual test, combined both branches in an integration worktree; OTP ran from the main checkout because the graph is not in git. | Done. |
+| backend (#14) | `tickets` app: `Ticket` model with DB constraints and `clean()`, Django admin with language tabs, seed migration `0002` for Kraków and Warsaw, `GET .../tickets/` and `POST .../tickets/suggest/`, Polish translations. Kraków prices read from the official ZTP page on 2026-11-15. Warsaw prices from model memory, because the ZTM site returned 403. Added Kraków single-ride rows. Removed a URLField deprecation warning (Django 6.0). | Done. |
+| frontend (#82) | `TicketsView` at `/tickets`, `TicketHint` in journey results, `formatMoney` on decimal strings (no floats), dev mock behind `VITE_TICKETS_MOCK`. Removed the now-unused `PlaceholderView`. | Done. |
+| tester (#82) | Frontend: 63 new tests, suite 577 passing. Fixed its own `.at(-1)`, which broke `vue-tsc`. | Passing. |
+| tester (#14) | Backend: 95 tests in `backend/tickets/tests`, full backend suite 1617 passing. A strict xfail test exposed the CHECK constraint bug. | Passing. Bug reported without code changes. |
+| reviewer (#82) | Rounds: 2. | Round 1 CHANGES REQUESTED (Polish literals in the mock). Fixed. Round 2 APPROVED. |
+| reviewer (#14) | Rounds: 2. | Round 1 CHANGES REQUESTED (CHECK constraint let NULL validity pass). Fixed. Round 2 APPROVED. |
+
+**Review findings that mattered:**
+- Backend, blocking: a CHECK constraint let NULL validity pass, because NULL passes CHECK in PostgreSQL. Fixed.
+- Backend, should-fix: the cheapest ticket was wrong for a Kraków trip of 31 to 90 min without transfers. Fixed.
+- Frontend, blocking: the mock contained Polish literals, but the repo is English. Now English with `[pl]` and `[en]` markers.
+- Deferred: zones always default to the first zone (#83). Warsaw prices are not verified.
+
+**Manual test (maintainer):** Approved. Warsaw prices were flagged for checking; no corrections were given.
+
+**Problems and lessons:**
+- A strict xfail test let the tester report a production bug without touching code.
+- Mocks are repo code, so they must be in English.
+- The test `tsconfig` has a narrower `lib` than app code (`tsconfig.vitest` has `lib: []`), so `.at(-1)` failed the type check.
+- The uncommitted contract was read from the main checkout, as in earlier features.
+
+**Follow-ups:**
+- Zones per stop (#83).
+- Checkout and accounts (#17). The assistant has no ticket tool yet.
+- Verify the Warsaw prices and the source URL.
+- Drop the test database `ljd_feat14_tickets`.
+- `VITE_TICKETS_MOCK` in `.env.example` (devops).
+
 ## Stop view — 2026-11-15
 **Issues / PRs:** #9, #56 (PRs: pending); #77 split off (new, not started)
 **Branches:** feat/9-stop-overview (backend), feat/56-stop-view (frontend)

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 09:55+0100\n"
+"POT-Creation-Date: 2026-11-15 20:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,15 +19,16 @@ msgstr ""
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
-#: cities/views.py:61 journeys/views.py:73 timetable/views.py:70
+#: cities/views.py:65 journeys/views.py:73 tickets/views.py:40
+#: timetable/views.py:103
 msgid "City not found."
 msgstr "Nie znaleziono miasta."
 
-#: config/settings/base.py:133
+#: config/settings/base.py:135
 msgid "Polish"
 msgstr "polski"
 
-#: config/settings/base.py:134
+#: config/settings/base.py:136
 msgid "English"
 msgstr "angielski"
 
@@ -154,34 +155,218 @@ msgstr "Ten punkt leży poza obszarem miasta."
 msgid "The start and the destination must be different."
 msgstr "Punkt startowy i docelowy muszą być różne."
 
-#: timetable/serializers.py:33
+#: tickets/admin.py:21
+#, python-format
+msgid "Zone ids, comma separated. Zones per city: %(zones)s."
+msgstr ""
+"Identyfikatory stref oddzielone przecinkami. Strefy w miastach: %(zones)s."
+
+#: tickets/admin.py:35 tickets/models.py:42
+msgid "city"
+msgstr "miasto"
+
+#: tickets/admin.py:86
+msgid "Validity"
+msgstr "Ważność"
+
+#: tickets/admin.py:87
+msgid "Price"
+msgstr "Cena"
+
+#: tickets/admin.py:100 tickets/models.py:54
+msgid "zones"
+msgstr "strefy"
+
+#: tickets/apps.py:8
+msgid "Tickets"
+msgstr "Bilety"
+
+#: tickets/models.py:31
+msgid "Single ride"
+msgstr "Jednoprzejazdowy"
+
+#: tickets/models.py:32
+msgid "Time ticket"
+msgstr "Bilet czasowy"
+
+#: tickets/models.py:33
+msgid "Daily ticket"
+msgstr "Bilet dobowy"
+
+#: tickets/models.py:34
+msgid "Period ticket"
+msgstr "Bilet okresowy"
+
+#: tickets/models.py:39
+msgid "id"
+msgstr "identyfikator"
+
+#: tickets/models.py:40
+msgid "Stable slug, unique across cities, e.g. krakow-time-60-z123."
+msgstr ""
+"Stały identyfikator, unikalny we wszystkich miastach, np. krakow-time-60-"
+"z123."
+
+#: tickets/models.py:43
+msgid "name"
+msgstr "nazwa"
+
+#: tickets/models.py:44
+msgid "description"
+msgstr "opis"
+
+#: tickets/models.py:45
+msgid "kind"
+msgstr "rodzaj"
+
+#: tickets/models.py:47
+msgid "validity (minutes)"
+msgstr "ważność (minuty)"
+
+#: tickets/models.py:50
+msgid "Empty for single-ride tickets. Daily tickets: 1440 × number of days."
+msgstr ""
+"Puste dla biletów jednoprzejazdowych. Bilety dobowe: 1440 × liczba dni."
+
+#: tickets/models.py:55
+msgid "Zone ids from the city config, comma separated, e.g. 1,2."
+msgstr ""
+"Identyfikatory stref z konfiguracji miasta, oddzielone przecinkami, np. 1,2."
+
+#: tickets/models.py:57
+msgid "reduced fare"
+msgstr "bilet ulgowy"
+
+#: tickets/models.py:58
+msgid "price"
+msgstr "cena"
+
+#: tickets/models.py:59
+msgid "currency"
+msgstr "waluta"
+
+#: tickets/models.py:60
+msgid "price checked on"
+msgstr "data sprawdzenia ceny"
+
+#: tickets/models.py:61
+msgid "official price list"
+msgstr "oficjalny cennik"
+
+#: tickets/models.py:63
+msgid "active"
+msgstr "aktywny"
+
+#: tickets/models.py:63
+msgid "Only active tickets are shown."
+msgstr "Pokazywane są tylko aktywne bilety."
+
+#: tickets/models.py:67
+msgid "ticket"
+msgstr "bilet"
+
+#: tickets/models.py:68
+msgid "tickets"
+msgstr "bilety"
+
+#: tickets/models.py:100
+msgid "Unknown city."
+msgstr "Nieznane miasto."
+
+#: tickets/models.py:104
+msgid "A ticket must cover at least one zone."
+msgstr "Bilet musi obejmować co najmniej jedną strefę."
+
+#: tickets/models.py:106
+msgid "Each zone may be listed only once."
+msgstr "Każdą strefę można podać tylko raz."
+
+#: tickets/models.py:112
+#, python-format
+msgid "Unknown zones: %(zones)s. Zones of this city: %(known)s."
+msgstr "Nieznane strefy: %(zones)s. Strefy tego miasta: %(known)s."
+
+#: tickets/models.py:123
+msgid "Single-ride tickets have no validity period; leave it empty."
+msgstr ""
+"Bilety jednoprzejazdowe nie mają okresu ważności; zostaw to pole puste."
+
+#: tickets/models.py:128
+msgid "This kind of ticket needs a validity period."
+msgstr "Ten rodzaj biletu wymaga okresu ważności."
+
+#: tickets/models.py:134
+msgid "Daily tickets last whole days (1440 × days), shorter than 7 days."
+msgstr ""
+"Bilety dobowe obowiązują przez pełne doby (1440 × dni), krócej niż 7 dni."
+
+#: tickets/models.py:138
+msgid "Period tickets last at least 7 days (10080 minutes)."
+msgstr "Bilety okresowe obowiązują co najmniej 7 dni (10080 minut)."
+
+#: tickets/models.py:143
+msgid "Use a three-letter ISO 4217 code, e.g. PLN."
+msgstr "Użyj trzyliterowego kodu ISO 4217, np. PLN."
+
+#: tickets/models.py:146
+msgid "The price cannot be negative."
+msgstr "Cena nie może być ujemna."
+
+#: tickets/serializers.py:80
+#, python-format
+msgid "Unknown zone: %(zones)s."
+msgstr "Nieznana strefa: %(zones)s."
+
+#: tickets/serializers.py:88
+msgid "This city has no ticket zones."
+msgstr "To miasto nie ma stref biletowych."
+
+#: tickets/services.py:92
+#, python-format
+msgid ""
+"No single or time ticket covers this %(minutes)d-minute journey in %(zones)s."
+msgstr ""
+"Żaden bilet jednoprzejazdowy ani czasowy nie wystarczy na tę podróż "
+"(%(minutes)d min, %(zones)s)."
+
+#: tickets/services.py:96
+#, python-format
+msgid "%(ticket)s covers this journey without transfers in %(zones)s."
+msgstr "%(ticket)s wystarczy na tę podróż bez przesiadek (%(zones)s)."
+
+#: tickets/services.py:101
+#, python-format
+msgid "%(ticket)s covers this %(minutes)d-minute journey in %(zones)s."
+msgstr "%(ticket)s wystarczy na tę podróż (%(minutes)d min, %(zones)s)."
+
+#: timetable/serializers.py:37
 msgid "Date is out of range."
 msgstr "Data jest poza obsługiwanym zakresem."
 
-#: timetable/serializers.py:58 timetable/serializers.py:59
+#: timetable/serializers.py:61 timetable/serializers.py:62
 msgid "Enter at least 2 characters."
 msgstr "Wpisz co najmniej 2 znaki."
 
-#: timetable/views.py:81
+#: timetable/views.py:114
 msgid "Line not found."
 msgstr "Nie znaleziono linii."
 
-#: timetable/views.py:89
+#: timetable/views.py:122
 msgid "This line does not run in this direction."
 msgstr "Ta linia nie kursuje w tym kierunku."
 
-#: timetable/views.py:161
+#: timetable/views.py:194 timetable/views.py:264 timetable/views.py:289
 msgid "Stop not found."
 msgstr "Nie znaleziono przystanku."
 
-#: timetable/views.py:165
+#: timetable/views.py:198
 msgid "This line does not stop here in this direction."
 msgstr "Ta linia nie zatrzymuje się na tym przystanku w tym kierunku."
 
-#: timetable/views.py:189
+#: timetable/views.py:222
 msgid "Trip not found."
 msgstr "Nie znaleziono kursu."
 
-#: timetable/views.py:192
+#: timetable/views.py:225
 msgid "This trip does not run on this date."
 msgstr "Ten kurs nie odbywa się w tym dniu."

@@ -49,7 +49,7 @@ flowchart LR
 | Service | Where | Notes |
 |---|---|---|
 | Frontend | `frontend/` | Vue 3, TypeScript, Vite, Pinia, vue-i18n, MapLibre |
-| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable`, `journeys`, `assistant` |
+| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable`, `journeys`, `assistant`, `tickets` |
 | celery-worker, celery-beat | `backend/` image | Same image as the backend; runs background tasks |
 | Redis | `redis:7-alpine` | Celery broker |
 | PostgreSQL | `postgis/postgis:16-3.4` | Main database |
@@ -348,8 +348,8 @@ Rules the app follows:
 - **Geometry.** OTP's polylines are decoded in `polyline.py` to GeoJSON `[lon, lat]` coordinates.
 - **Line summary.** Each transit leg reuses the timetable line summary, so its ids link to the timetable.
 - **Frontend** (#13). The home route `/` is a full-screen map with a floating panel on desktop, and a top panel
-  with a bottom tab bar on phones. `/journey` redirects to `/`. The tab bar also lists Tickets and Assistant,
-  which are planned. The Pinia store keeps the search across navigation. Times use the city's timezone offset.
+  with a bottom tab bar on phones. `/journey` redirects to `/`. The tab bar also links to Tickets (`/tickets`)
+  and the assistant page. The Pinia store keeps the search across navigation. Times use the city's timezone offset.
   Errors are shown for `503`, `429`, network failures and `400`.
 - **Not in the MVP.** Address geocoding: from and to are stops, map points or my location
   ([decision 31](decisions.md#31-no-address-geocoding-in-the-mvp)).
@@ -505,6 +505,44 @@ Rules the endpoint follows:
   No Warsaw data was checked locally.
 - **Follow-ups.** Nearby search and colloquial aliases (#77). Tests for config changes while cached, and for an
   unknown route suffix (see [decision 39](decisions.md#39-stop-overview-counts-directions-in-one-aggregate-with-a-24-h-cache)).
+
+### Tickets (implemented, #14, #82)
+
+The `tickets` Django app (`backend/tickets/`) holds the ticket catalogue of each city and the ticket suggestion.
+Contract: [api.md](api.md#tickets-14).
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (/tickets, journey results)
+    participant B as Backend (tickets app)
+    participant P as PostgreSQL
+
+    U->>F: open /tickets
+    F->>B: GET /api/v1/cities/{city}/tickets/?reduced=
+    B->>P: tickets of the city
+    B-->>F: catalogue
+    U->>F: journey results shown
+    F->>B: POST /api/v1/cities/{city}/tickets/suggest/
+    B->>P: single and time tickets of the city
+    B-->>F: suggested ticket
+    F-->>U: ticket hint under the journey
+```
+
+- **Model.** `Ticket` has `name` and `description` translated with django-modeltranslation (pl and en). Database
+  constraints and `clean()` validate the rows.
+- **Admin.** The Django admin has language tabs for the translated fields.
+- **Seed.** Migration `0002` seeds Kraków and Warsaw. Kraków prices were read from the official ZTP page on
+  2026-11-15. Warsaw prices come from memory, because the ZTM site returned 403; they are still to be verified.
+- **Suggestion.** Only single and time tickets are considered. The Kraków "30 minutes or one ride" ticket is seeded
+  twice, as a time ticket (30 min) and as a single ticket, so the cheapest rule finds it for both cases
+  ([decision 40](decisions.md#40-ticket-suggestion-uses-single-and-time-tickets-only)).
+- **Zones.** Zones per stop are not modelled. The suggestion uses the city's first zone (#83). A city without
+  `ticket_zones` returns `400` when zones are omitted.
+- **Frontend.** `TicketsView` at `/tickets` shows the catalogue. `TicketHint` shows the suggestion under journey
+  results. Prices are formatted from decimal strings, never floats. `VITE_TICKETS_MOCK=true|empty|fail|offline`
+  replaces the API with a mock for development.
+- **Demo only.** No purchase, accounts or QR tickets yet (#16, #17).
 
 ### Live vehicles (planned, #20, #21)
 

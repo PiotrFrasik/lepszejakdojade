@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "transit_data",
     "timetable",
     "journeys",
+    "tickets",
     "assistant",
 ]
 
