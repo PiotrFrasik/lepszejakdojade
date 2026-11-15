@@ -1,17 +1,28 @@
 /**
- * Development-only stand-in for `GET /api/v1/cities/{city}/stops/{stop_id}/departures/`, used
- * only in the Vite dev server (`import.meta.env.DEV`) started with `VITE_DEPARTURES_MOCK=true`
- * (before the backend endpoint exists). Production builds never use or bundle it, whatever the
- * variable says. It follows the contract shapes with fictional data; names are placeholders, not
- * translated UI text.
+ * Development-only stand-ins for `GET /api/v1/cities/{city}/stops/{stop_id}/departures/` and
+ * `GET /api/v1/cities/{city}/stops/{stop_id}/`, used only in the Vite dev server
+ * (`import.meta.env.DEV`) started with `VITE_DEPARTURES_MOCK=true` (before the backend endpoints
+ * exist). Production builds never use or bundle them, whatever the variable says. They follow the
+ * contract shapes with fictional data; names are placeholders, not translated UI text.
  *
- * Keywords in the stop id pick the answer: `missing` → 404, `fail` → 500, `offline` → network
- * error, `empty` → no departures, `static` → `realtime_available: false`. Any other id gives a
- * mix of late, early, on-time, cancelled and timetable-only departures; delays change on every
- * call so the auto-refresh is visible.
+ * Keywords in the stop id pick the answer (both endpoints): `missing` → 404, `fail` → 500,
+ * `offline` → network error. Departures only: `empty` → no departures, `static` →
+ * `realtime_available: false`. Stop overview only: `nolines` → no lines, `brokenlines` → 500
+ * (the departures board still loads). Any other id gives a mix of late, early, on-time,
+ * cancelled and timetable-only departures; delays change on every call so the auto-refresh is
+ * visible.
  */
 import { ApiError } from '@/api/client'
-import type { LineSummary, StopDeparture, StopDepartures, StopId } from '@/types/api'
+import type {
+  LineSummary,
+  StopDeparture,
+  StopDepartures,
+  StopId,
+  StopLine,
+  StopOverview,
+} from '@/types/api'
+
+const STOP_NAME = 'Northgate Sq (mock)'
 
 const LINES: LineSummary[] = [
   {
@@ -130,11 +141,48 @@ export async function mockGetStopDepartures(
   return {
     stop: {
       id: stopId,
-      name: 'Northgate Sq (mock)',
+      name: STOP_NAME,
       stop_ids: [stopId, 'mock:platform_1', 'mock:platform_2'],
     },
     generated_at: iso(now),
     realtime_available: realtime,
     departures: departures.slice(0, limit),
+  }
+}
+
+export async function mockGetStopOverview(
+  _city: string,
+  stopId: StopId,
+  signal?: AbortSignal,
+): Promise<StopOverview> {
+  await wait(700, signal)
+  const id = stopId.toLowerCase()
+  if (id.includes('missing')) throw new ApiError(404, 'not_found', 'Not found.')
+  if (id.includes('fail')) throw new ApiError(500, 'server_error', 'Server error.')
+  if (id.includes('offline')) throw new ApiError(0, 'network_error', 'Failed to fetch')
+  if (id.includes('brokenlines')) throw new ApiError(500, 'server_error', 'Server error.')
+
+  const lines: StopLine[] = id.includes('nolines')
+    ? []
+    : LINES.map((line, i) => ({
+        line,
+        directions:
+          i === 2
+            ? [{ direction: 0, headsign: HEADSIGNS[3]!, platform_id: 'mock:platform_2' }]
+            : [
+                { direction: 0, headsign: HEADSIGNS[i]!, platform_id: 'mock:platform_0' },
+                { direction: 1, headsign: HEADSIGNS[i + 2]!, platform_id: 'mock:platform_1' },
+              ],
+      }))
+  return {
+    stop: {
+      id: stopId,
+      name: STOP_NAME,
+      lat: 50.06,
+      lon: 19.94,
+      vehicle_types: [...new Set(lines.map((entry) => entry.line.vehicle_type))],
+      stop_ids: [stopId, 'mock:platform_1', 'mock:platform_2'],
+    },
+    lines,
   }
 }
