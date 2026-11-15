@@ -9,6 +9,7 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Tickets (#14, #82): `GET /api/v1/cities/{city}/tickets/?reduced=` lists a city's tickets and `POST /api/v1/cities/{city}/tickets/suggest/` suggests the cheapest single or time ticket for a journey. Tickets are in the new `tickets` app with admin, Polish and English names and seed data for Kraków and Warsaw. The `/tickets` page shows the catalogue, and a ticket hint appears under journey results. Demo only: no purchase yet.
 - Stop view (#9, #56): `GET /api/v1/cities/{city}/stops/{stop_id}/` returns the lines serving a stop group with
   their directions, each linked to the stop timetable. Directions are cached for 24 h per route. The stop page at
   `/timetable/stops/:stopId` shows the "Lines at this stop" list below the departures board. Both requests load in
