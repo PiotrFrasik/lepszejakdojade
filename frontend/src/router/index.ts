@@ -51,10 +51,11 @@ export const routes: RouteRecordRaw[] = [
     meta: { titleKey: 'nav.tickets' },
   },
   {
+    // Chat assistant (#19); the same conversation is also in the floating panel on other pages.
     path: '/assistant',
     name: 'assistant',
-    component: PlaceholderView,
-    meta: { titleKey: 'nav.assistant' },
+    component: () => import('@/views/AssistantView.vue'),
+    meta: { titleKey: 'nav.assistant', fullscreen: true },
   },
   {
     path: '/data-sources',

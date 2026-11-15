@@ -13,6 +13,12 @@ Entries are written from Conventional Commit messages.
   age of its active static feeds (created, retrieved, imported, service dates). Attributions take optional
   `descriptions` (pl and en) in the city config. A Data sources page shows them per city, with a notice
   that the data was processed.
+- AI chat assistant (#18, #19): `POST /api/v1/assistant/chat/` in the new `assistant` app and a chat panel on every
+  page with a `/assistant` page. Gemini sits behind a provider interface (REST over `urllib`, no SDK); the model is
+  set by `GEMINI_MODEL` (default `gemini-flash-latest`) and the key by `GEMINI_API_KEY`. Six read-only tools use the
+  timetable and journey services. The API is stateless; the client sends the last 20 messages. Answers use the
+  `Accept-Language` language. Journey, departure and stop cards are built from tool results only. Per-IP throttling
+  (10 per minute, 100 per day) is set in settings and env.
 - Journey search API (#12): `POST /api/v1/cities/{city}/journeys/search/` in the new `journeys` app. It calls
   the city's OpenTripPlanner 2 instance through its GraphQL API (`/otp/gtfs/v1`, 10 s timeout). Returns up
   to 5 itineraries with legs, geometry, and walk and bike comparison. Preferences: fewer transfers, less

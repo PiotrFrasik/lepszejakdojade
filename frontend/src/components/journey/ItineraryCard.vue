@@ -12,19 +12,24 @@ import type { Itinerary, JourneyLeg } from '@/types/api'
  * One connection of the results list. The summary button selects it (drawn on the map) and
  * toggles the leg-by-leg details.
  */
-const props = defineProps<{
-  itinerary: Itinerary
-  index: number
-  selected: boolean
-  expanded: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    itinerary: Itinerary
+    index: number
+    selected: boolean
+    expanded: boolean
+    /** Prefix of element ids, unique per list (the chat shows cards next to the results). */
+    idPrefix?: string
+  }>(),
+  { idPrefix: 'itinerary' },
+)
 
 const emit = defineEmits<{ toggle: [] }>()
 
 const { t } = useI18n()
 const fmt = useFormat()
 
-const detailsId = computed(() => `itinerary-${props.index}-details`)
+const detailsId = computed(() => `${props.idPrefix}-${props.index}-details`)
 
 const transfersText = computed(() =>
   props.itinerary.transfers > 0

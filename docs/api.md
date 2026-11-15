@@ -65,7 +65,7 @@ Content-Language: en
 | Account | `POST /auth/register/`, `POST /auth/login/`, `POST /auth/logout/`, `GET /auth/me/`, `PATCH /auth/me/` (incl. `language`) |
 | Favourites 🔒 | `GET/POST/DELETE /my/favourites/` |
 | History 🔒 | `GET/DELETE /my/history/` |
-| Chat | `POST /assistant/chat/` (body includes `language`: `pl` or `en`) |
+| Chat (implemented, #18) | `POST /assistant/chat/` (answer language = negotiated `Accept-Language`) |
 | Data sources (#25) | `GET /data-sources/` |
 | Health | `GET /health/` |
 
@@ -366,6 +366,66 @@ Response `200 OK`:
   OTP finds no such route or it would take more than 3 hours.
 - Errors: unknown city → `404`; city without OTP configured or OTP unreachable / timing out (10 s) / returning an error
   → `503` with code `journey_planner_unavailable` (message translated). OTP internals are never passed to the client.
+
+## Assistant (#18)
+
+### `POST /api/v1/assistant/chat/` (#18)
+AI chat assistant. No auth. Stateless: the client keeps the conversation and sends it with every request.
+Request:
+```json
+{
+  "city": "krakow",
+  "messages": [
+    { "role": "user", "text": "Kiedy następna 52 z Bagateli?" }
+  ]
+}
+```
+- `city`: a city id from `GET /cities/`; unknown → `400 validation_error`.
+- `messages`: 1–20 items, oldest first, roles `user` or `assistant`; the last one must be `user`. Each `text` is
+  1–1000 characters after trimming. Older messages beyond 20 are dropped by the client, not the server.
+- **Language.** The answer is written in the negotiated language (`Accept-Language`, see Language negotiation),
+  whatever language the question is in. No `language` field in the body.
+
+Response `200 OK`:
+```json
+{
+  "message": { "role": "assistant", "text": "Najbliższa 52 z Bagateli odjeżdża o 08:14 w kierunku Czerwone Maki P+R." },
+  "cards": [
+    {
+      "type": "departures",
+      "stop": { "stop_id": "ztp_tram:stop_376_47501", "name": "Bagatela" },
+      "departures": [
+        { "line": { "…": "line summary" }, "stop_id": "ztp_tram:stop_376_47501", "direction": 0, "headsign": "Czerwone Maki P+R",
+          "time": "08:14", "next_day": false, "date": "2026-11-16", "trip_id": "ztp_tram:trip_3" }
+      ]
+    }
+  ]
+}
+```
+- `message.text`: plain text (no Markdown, no HTML); clients render it as text.
+- `cards`: 0–3 items, built by the server **only from tool results** of this turn (never from model text). Types:
+  - `journey`: `{ "type": "journey", "from": {…}, "to": {…}, "itinerary": {…}, "comparison": {…} }` — `from`, `to`,
+    one `itinerary` object and `comparison` exactly as in `POST /cities/{city}/journeys/search/`.
+  - `departures`: as above; up to 10 upcoming departures at one stop group (one or more lines), ascending.
+    `stop.stop_id` is the group's representative platform (for display). Each departure's own `stop_id` is the
+    platform it leaves from; with `line.id` / `direction` it links to the stop timetable
+    (`/lines/{line_id}/stops/{stop_id}/timetable/?direction=&date=`).
+  - `stops`: `{ "type": "stops", "stops": [ … ] }` — up to 5 items exactly as in `GET /cities/{city}/stops/?q=`
+    (used when a place name is ambiguous).
+  Clients ignore card types they do not know.
+- **Answers only from app data.** The model may answer only from tool results (stop search, journey planning, lines,
+  line route, stop timetable / next departures). If the tools give no answer it says so; it never guesses times,
+  prices or delays. Tickets and live data are not available yet (planned) and the assistant says so.
+- Proper names (stops, headsigns) are never translated.
+
+Errors:
+- `400 validation_error` with `details` (bad `city`, `messages`, roles, lengths).
+- `429 rate_limited`: per client IP, 10 requests per minute and 100 per day (values from settings / env, not code).
+  Response has a `Retry-After` header (seconds) and `error.details` is not used.
+- `503 assistant_unavailable`: no `GEMINI_API_KEY`, provider error or timeout (30 s), or a tool loop longer than
+  5 steps. Provider internals are never passed to the client. A tool failing (e.g. OTP down) is **not** a 503: the
+  assistant answers that the data is unavailable right now.
+- All `error.message` values are translated.
 
 ## Data sources (#25)
 

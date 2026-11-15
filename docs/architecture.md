@@ -22,7 +22,7 @@ flowchart LR
         obuild["OTP graph build, one-shot<br/>otp-build-krakow, otp-build-warszawa<br/>profile otp-build"]
     end
 
-    gemini["Google Gemini API<br/>(planned, #18)"]
+    gemini["Google Gemini API<br/>(#18, REST via urllib)"]
     ztp["ZTP Kraków<br/>GTFS-RT TripUpdates<br/>tram, bus, Mobilis bus (#38)"]
     gtfs["GTFS static feeds<br/>ZTP Kraków, mkuran.pl (Warsaw ZTM, WKD, national rail)"]
     osm["Geofabrik OSM extracts<br/>małopolskie, mazowieckie"]
@@ -36,7 +36,7 @@ flowchart LR
     cw -- "HTTP GET, protobuf" --> ztp
     be -- "journeys: GraphQL POST /otp/gtfs/v1 (#12)" --> okr
     be -- "journeys: GraphQL POST /otp/gtfs/v1 (#12)" --> owa
-    be -.-> gemini
+    be -- "assistant: HTTPS, 30 s timeout (#18)" --> gemini
     cw -- "HTTP GET, zip (conditional)" --> gtfs
     gtfs -- "HTTP GET, zip (conditional)" --> be
     osm -- "HTTP GET, pbf (conditional)" --> be
@@ -49,13 +49,13 @@ flowchart LR
 | Service | Where | Notes |
 |---|---|---|
 | Frontend | `frontend/` | Vue 3, TypeScript, Vite, Pinia, vue-i18n, MapLibre |
-| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable`, `journeys` |
+| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable`, `journeys`, `assistant` |
 | celery-worker, celery-beat | `backend/` image | Same image as the backend; runs background tasks |
 | Redis | `redis:7-alpine` | Celery broker |
 | PostgreSQL | `postgis/postgis:16-3.4` | Main database |
 | OpenTripPlanner | `opentripplanner/opentripplanner:2.6.0` | One instance per city: `otp-krakow` and `otp-warszawa`, profile `otp`, bound to 127.0.0.1 on ports 8080 and 8081. Graphs are built by one-shot services (profile `otp-build`). Journey search calls it through GraphQL (#12) |
 | OSM extracts | Geofabrik, external | Regional extracts for Małopolska and Mazowsze. `prepare_otp_inputs` clips them with `osmium-tool`, which is installed in the backend image (#8) |
-| Gemini | external | Planned (#18). Behind a provider interface |
+| Gemini | external | Used by the `assistant` app (#18). Behind a provider interface; REST over `urllib`, no SDK. Model from `GEMINI_MODEL` (default `gemini-flash-latest`), key from `GEMINI_API_KEY` |
 | ZTP Kraków feeds | external | Read by the realtime collector |
 | GTFS static feeds | external | Imported nightly by `celery-worker` (#7). Kraków: ZTP. Warsaw: mkuran.pl (ZTM data). WKD: mkuran.pl. National rail: mkuran.pl "Polish Trains", one feed cut per city (#43) |
 
@@ -411,11 +411,55 @@ Planned: the stop entry (a stop page without a line) and the departures board (#
 The realtime `StopEvent` data (#6) and vehicle positions feed the departures and live map
 endpoints. Delay statistics (#22) and predictions (#23) are built on the same rows.
 
-### Chat (planned, #18, #19)
+### AI chat assistant (implemented, #18, #19)
 
-The frontend sends a message to the backend. The backend calls Gemini through the provider
-interface. Gemini answers by calling tools (journeys, timetables, tickets, live data) and the
-backend returns text or cards. Rate limits apply per user.
+`POST /api/v1/assistant/chat/` is in the `assistant` Django app. It is stateless: the API keeps no
+database table and no session. The browser keeps the conversation in `sessionStorage` and sends the
+last 20 messages with each request. ([api.md](api.md#assistant-18))
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (chat panel, /assistant)
+    participant B as Backend (assistant app)
+    participant G as Gemini (provider)
+    participant T as Timetable and journey services
+
+    U->>F: type a question
+    F->>B: POST /api/v1/assistant/chat/ (city, last 20 messages)
+    B->>B: throttle per client IP (10/min, 100/day)
+    B->>G: messages and tool declarations
+    G-->>B: function call (e.g. search_stops)
+    B->>T: read-only tool call
+    T-->>B: result
+    B->>G: tool result
+    G-->>B: final text (tool loop max 5 steps)
+    B-->>F: message and cards (cards built from tool results only)
+    F-->>U: text and cards
+```
+
+- **Provider interface.** The model is behind a provider interface. The Gemini provider calls the REST API
+  with `urllib`. The model is set by `GEMINI_MODEL` (default `gemini-flash-latest`), the key by `GEMINI_API_KEY`.
+- **Tools.** Six read-only tools: `search_stops`, `plan_journey`, `next_departures`, `list_lines`,
+  `get_line_route` and `get_stop_timetable`. They call the existing timetable and journey services.
+  Tickets and live data are not tools yet (planned).
+- **Cards.** `journey`, `departures` and `stops` cards are built by the server from tool results of the
+  current turn, never from model text.
+- **Language.** The answer uses the `Accept-Language` language (see
+  [decision 33](decisions.md#33-chat-language-comes-from-accept-language)).
+- **Throttling.** Per client IP, 10 requests per minute and 100 per day. Values come from settings and env.
+  Counters use Django's local-memory cache, so each process counts on its own.
+- **Prompt-injection safeguards.** Tools are read-only. The city is fixed by the request. Tool arguments
+  are capped. A canary value in the system prompt detects prompt leaks.
+- **Frontend.** A chat panel on every page and the `/assistant` page. Cards for journeys, departures and
+  stops. `VITE_ASSISTANT_MOCK=true` replaces the API with a mock in development builds only.
+- **Decisions.** [Stateless chat](decisions.md#32-stateless-chat-with-no-database-table),
+  [Accept-Language](decisions.md#33-chat-language-comes-from-accept-language) and
+  [per-departure `stop_id`](decisions.md#34-departures-cards-carry-a-stop_id-per-departure).
+
+Planned follow-ups: a shared Redis cache and proxy setting for the throttle; assistant variables in
+`docker-compose.yml` and `.env.example`; a normal answer instead of `503` for blocked prompts; a departures index
+for Warsaw; the limit applied before filtering departures; cards that do not bypass the endpoint serializers.
 
 ## Retention
 

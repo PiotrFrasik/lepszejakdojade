@@ -1,0 +1,28 @@
+# Polish translations of the assistant app.
+msgid ""
+msgstr ""
+"Project-Id-Version: lepszejakdojade\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
+"(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
+"n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+
+#: assistant/chat.py
+msgid "Sorry, I cannot help with that. Ask me about stops, lines or journeys."
+msgstr "Niestety nie mogę w tym pomóc. Zapytaj o przystanki, linie lub połączenia."
+
+#: assistant/serializers.py
+msgid "Unknown city."
+msgstr "Nieznane miasto."
+
+#: assistant/serializers.py
+msgid "The last message must be from the user."
+msgstr "Ostatnia wiadomość musi pochodzić od użytkownika."
+
+#: assistant/views.py
+msgid "The assistant is unavailable right now. Try again later."
+msgstr "Asystent jest teraz niedostępny. Spróbuj ponownie później."

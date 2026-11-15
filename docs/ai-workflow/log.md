@@ -48,6 +48,42 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 - The deferred should-fix and nits above.
 - PKP PLK must be told about the processing. This is done by the maintainer, outside the app.
 
+## AI chat assistant — 2026-11-15
+**Issues / PRs:** #18, #19 (PRs: pending)
+**Branches:** feat/18-assistant-chat, feat/19-chat-window; integration worktree `integration/assistant` for the manual test
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Wrote the contract for #18 in `docs/api.md` before the agents started and put its path in their prompts (uncommitted, so worktrees did not see it). Resolved a contract gap: per-departure `stop_id`. Built the integration worktree by applying both diffs. | Done. No conflicts. |
+| ai (#18) | New `assistant` app: provider interface, Gemini over `urllib`, six read-only tools, server-built cards, throttling, prompt-injection safeguards. The path-guard hook blocked wiring in `config/`, so that part went to the backend agent. The app keeps its own locale files, because `backend/locale` is outside its area. Smoke-tested with a fake provider on real Kraków data. | Done. |
+| backend (#18) | Wiring: `INSTALLED_APPS`, URLs and six settings. | Done. Full suite 1213 passing at that point. |
+| frontend (#19) | Chat panel on every page, `/assistant` page, cards, error states including a 429 countdown. Reused `ItineraryCard` with an id prefix. The journey store gets `showItinerary`. | Done. |
+| tester (#18, #19) | Frontend: 61 new tests (329 → 390). Backend: 153 new tests. | Found one real bug: the departure link used the card's stop id. One type error in a test (`.at(-1)`), fixed with `mock.lastCall`. Full backend suite 1366 passing, no production bugs. |
+| reviewer (#19) | APPROVED. | Should-fix applied: next-day date display, dev mock gated by DEV, Polish keywords removed from the mock code. |
+| reviewer (#18) | APPROVED. | Should-fix items listed as follow-ups (below). |
+
+**Review findings that mattered:**
+- #19: next-day departures needed a date in the display. Fixed.
+- #19: the dev mock is now gated by DEV, and Polish keywords were removed from its code.
+- Tester: the departure link used the card's stop id instead of the departure's own `stop_id`. Fixed.
+
+**Manual test (maintainer):** Passed.
+
+**Problems and lessons:**
+- The 5-hour usage limit stopped two agents mid-task. They were resumed with SendMessage and continued from their saved state.
+- The path-guard hook means a new Django app needs a backend agent for its wiring (`INSTALLED_APPS`, URLs, settings). Plan that as its own step.
+- The OTP graph lives only in an old integration worktree. Worktree cleanup must keep it or move it.
+- The uncommitted contract was again not visible from the worktrees; the prompts pointed to the main checkout.
+
+**Follow-ups (from the #18 review):**
+- Throttling: `NUM_PROXIES` and a Redis cache instead of local memory.
+- Assistant env vars are not yet in `docker-compose.yml` or `.env.example`.
+- Blocked prompts return `503`.
+- Warsaw departures index; apply the limit after filtering, not before.
+- Cards bypass the endpoint serializers.
+- Validate the rate-limit env values.
+- The provider timeout is not a hard limit.
+
 ## Journey search — 2026-11-15
 **Issues / PRs:** #12, #13, #59 (PRs: pending)
 **Branches:** feat/12-journey-search-endpoint, feat/13-journey-search-ui, feat/59-stop-search; integration worktree `integration/journeys` for the manual test

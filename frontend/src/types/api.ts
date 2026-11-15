@@ -333,3 +333,66 @@ export interface JourneySearchResponse {
   itineraries: Itinerary[]
   comparison: JourneyComparison
 }
+
+// ---------------------------------------------------------------------------
+// Assistant (#18)
+// ---------------------------------------------------------------------------
+
+export type ChatRole = 'user' | 'assistant'
+
+/** One message of the conversation; `text` is plain text (1–1000 characters after trimming). */
+export interface ChatMessage {
+  role: ChatRole
+  text: string
+}
+
+/** Body of `POST /api/v1/assistant/chat/`: 1–20 messages, oldest first, the last one `user`. */
+export interface ChatRequest {
+  city: CityId
+  messages: ChatMessage[]
+}
+
+/** `journey` card: one itinerary, shapes as in the journey search response. */
+export interface JourneyChatCard {
+  type: 'journey'
+  from: JourneyPlace
+  to: JourneyPlace
+  itinerary: Itinerary
+  comparison: JourneyComparison
+}
+
+/** One upcoming departure of a `departures` card (timetable ids). */
+export interface ChatDeparture {
+  /** Platform this departure leaves from (use it for the stop timetable link). */
+  stop_id: StopId
+  line: LineSummary
+  direction: DirectionId
+  headsign: string
+  /** `HH:MM` local. */
+  time: string
+  next_day: boolean
+  date: ServiceDate
+  trip_id: TripId
+}
+
+/** `departures` card: up to 10 upcoming departures at one stop, ascending. */
+export interface DeparturesChatCard {
+  type: 'departures'
+  stop: StopRef
+  departures: ChatDeparture[]
+}
+
+/** `stops` card: up to 5 stops as in the stop search (ambiguous place names). */
+export interface StopsChatCard {
+  type: 'stops'
+  stops: StopSearchResult[]
+}
+
+export type ChatCard = JourneyChatCard | DeparturesChatCard | StopsChatCard
+
+/** `POST /api/v1/assistant/chat/` → `200`. */
+export interface ChatResponse {
+  message: ChatMessage
+  /** 0–3 cards. Typed as `unknown` because clients must ignore card types they do not know. */
+  cards: unknown[]
+}
