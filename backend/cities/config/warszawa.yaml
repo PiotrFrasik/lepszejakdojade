@@ -1,7 +1,8 @@
 # City configuration: Warsaw.
 # Schema and validation: backend/cities/registry.py. The file name must equal `id`.
 # Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
-# Internal only (never returned by the API): feeds, ticket_zones, attributions, otp.
+# Internal only (never returned by the API): line_group_rules, feeds, ticket_zones, attributions,
+# otp.
 # Feed URLs and licences were checked against the publishers on the date in each comment.
 # A null URL is deliberate; the comment next to it gives the reason.
 
@@ -37,6 +38,29 @@ line_groups:
   - id: replacement
     names: { pl: Linie zastępcze i okresowe, en: Replacement and temporary lines }
     colour: "#d4a72c"
+
+# Internal: which line goes to which group. Rules are checked in order and the first match
+# wins; a line that matches no rule goes to the first group (day). Each rule may give
+# `vehicle_types`, `feeds` (gtfs_static ids) and `short_name` (a regular expression that must
+# match the whole GTFS route_short_name); omitted criteria match anything.
+# Numbering as published by ZTM Warszawa: buses 1xx-3xx normal, 4xx-5xx fast, E-x express
+# (peak), 7xx-8xx zone (suburban), L-x local suburban, Nxx night, Z/Z-x replacement,
+# C-x cemetery (temporary); trams 1-79 day; metro M1/M2; SKM Sx and other rail suburban.
+line_group_rules:
+  - group: replacement
+    short_name: "Z.*|C-?\\d+"
+  - group: night
+    short_name: "N\\d+"
+  - group: suburban
+    vehicle_types: [rail]
+  - group: suburban
+    feeds: [wkd, rail]
+  - group: suburban
+    vehicle_types: [bus]
+    short_name: "[78]\\d\\d|L-?\\d+"
+  - group: express
+    vehicle_types: [bus]
+    short_name: "[45]\\d\\d|E-?\\d+"
 
 # Warsaw publishes live vehicle positions but no live departures.
 realtime:

@@ -69,6 +69,27 @@ class LineGroup:
 
 
 @dataclass(frozen=True)
+class LineGroupRule:
+    """Puts matching lines into ``group`` (internal; first matching rule wins).
+
+    Every given criterion must match; an omitted criterion matches anything.
+    ``short_name`` is a regular expression that must match the whole GTFS short name.
+    """
+
+    group: str
+    vehicle_types: tuple[str, ...] = ()
+    feeds: tuple[str, ...] = ()
+    short_name: re.Pattern[str] | None = None
+
+    def matches(self, vehicle_type: str, feed_id: str, short_name: str) -> bool:
+        if self.vehicle_types and vehicle_type not in self.vehicle_types:
+            return False
+        if self.feeds and feed_id not in self.feeds:
+            return False
+        return self.short_name is None or self.short_name.fullmatch(short_name) is not None
+
+
+@dataclass(frozen=True)
 class Realtime:
     departures: bool
     vehicles: bool
@@ -127,11 +148,20 @@ class City:
     ticket_zones: tuple[TicketZone, ...]
     attributions: tuple[Attribution, ...]
     otp: OtpConfig | None = None  # None when the city has no `otp` section
+    # Internal: which line goes to which line group (first match wins).
+    line_group_rules: tuple[LineGroupRule, ...] = ()
 
     @property
     def name(self) -> str:
         """Name in the active language."""
         return self.names.get()
+
+    def line_group_for(self, vehicle_type: str, feed_id: str, short_name: str) -> LineGroup:
+        """The line group of a line; lines that match no rule go to the first group."""
+        for rule in self.line_group_rules:
+            if rule.matches(vehicle_type, feed_id, short_name):
+                return next(g for g in self.line_groups if g.id == rule.group)
+        return self.line_groups[0]
 
     @property
     def zoneinfo(self) -> ZoneInfo:
@@ -229,7 +259,7 @@ _TOP_LEVEL_KEYS = {
     "ticket_zones",
     "attributions",
 }
-_OPTIONAL_TOP_LEVEL_KEYS = {"otp"}
+_OPTIONAL_TOP_LEVEL_KEYS = {"otp", "line_group_rules"}
 
 
 def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
@@ -326,7 +356,53 @@ def parse_city(data: Any, source: str, expected_id: str | None = None) -> City:
         ticket_zones=tuple(ticket_zones),
         attributions=tuple(attributions),
         otp=_parse_otp(v, data["otp"]) if "otp" in data else None,
+        line_group_rules=_parse_line_group_rules(
+            v,
+            data.get("line_group_rules", []),
+            group_ids={group.id for group in line_groups},
+        ),
     )
+
+
+def _parse_line_group_rules(
+    v: _Validator, raw: Any, group_ids: set[str]
+) -> tuple[LineGroupRule, ...]:
+    """Rules may name feeds or vehicle types the city does not (yet) have; such criteria
+    simply never match. Groups must exist, because every line needs a valid group."""
+    rules = []
+    for i, item in enumerate(v.sequence(raw, "line_group_rules")):
+        path = f"line_group_rules[{i}]"
+        v.mapping(item, path, required={"group"}, optional={"vehicle_types", "feeds", "short_name"})
+        group = v.identifier(item["group"], f"{path}.group")
+        if group not in group_ids:
+            v.fail(f"{path}.group", f"unknown line group {group!r}")
+
+        rule_vehicle_types = v.sequence(item.get("vehicle_types", []), f"{path}.vehicle_types")
+        for j, vehicle_type in enumerate(rule_vehicle_types):
+            if vehicle_type not in VEHICLE_TYPES:
+                v.fail(f"{path}.vehicle_types[{j}]", f"must be one of {', '.join(VEHICLE_TYPES)}")
+
+        rule_feeds = v.sequence(item.get("feeds", []), f"{path}.feeds")
+        for j, feed_id in enumerate(rule_feeds):
+            v.identifier(feed_id, f"{path}.feeds[{j}]")
+
+        pattern = None
+        if "short_name" in item:
+            source = v.text(item["short_name"], f"{path}.short_name")
+            try:
+                pattern = re.compile(source)
+            except re.error as exc:
+                v.fail(f"{path}.short_name", f"invalid regular expression: {exc}")
+
+        rules.append(
+            LineGroupRule(
+                group=group,
+                vehicle_types=tuple(rule_vehicle_types),
+                feeds=tuple(rule_feeds),
+                short_name=pattern,
+            )
+        )
+    return tuple(rules)
 
 
 def _parse_otp(v: _Validator, raw: Any) -> OtpConfig:
