@@ -4,6 +4,7 @@ import type {
   City,
   CityDetail,
   CityId,
+  DataSourcesResponse,
   DirectionId,
   HealthResponse,
   JourneySearchRequest,
@@ -145,6 +146,11 @@ export function getCities(signal?: AbortSignal): Promise<City[]> {
 /** `GET /api/v1/cities/{city}/`: city settings. Unknown city → `ApiError` with status 404. */
 export function getCity(id: CityId, signal?: AbortSignal): Promise<CityDetail> {
   return apiGet<CityDetail>(`/cities/${encodeURIComponent(id)}/`, { signal })
+}
+
+/** `GET /api/v1/data-sources/`: licence attributions and data freshness of every city. */
+export function getDataSources(signal?: AbortSignal): Promise<DataSourcesResponse> {
+  return apiGet<DataSourcesResponse>('/data-sources/', { signal })
 }
 
 function cityPath(city: CityId, rest: string): string {

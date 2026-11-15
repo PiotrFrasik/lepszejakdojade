@@ -59,7 +59,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/data-sources',
     name: 'data-sources',
-    component: PlaceholderView,
+    component: () => import('@/views/DataSourcesView.vue'),
     meta: { titleKey: 'nav.dataSources' },
   },
   {

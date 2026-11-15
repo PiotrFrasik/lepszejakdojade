@@ -65,6 +65,28 @@
   "placeholder": {
     "comingSoon": "This section is coming soon."
   },
+  "dataSources": {
+    "title": "Data sources",
+    "intro": "Timetables, stops and lines in this app come from open data published by transport operators and cities. Below are the sources and licences for each city and how fresh the imported data is.",
+    "processedTitle": "Processed data",
+    "processed": "The data was processed for this app: filtered, converted and combined from several sources. It may differ from the official timetables, so the official sources published by the operators are authoritative.",
+    "loading": "Loading data sources…",
+    "noCities": "No cities are configured.",
+    "sourcesHeading": "Sources and licences",
+    "noSources": "No sources listed.",
+    "licence": "Licence:",
+    "freshnessHeading": "Data freshness",
+    "noFeeds": "No data imported yet.",
+    "feedId": "Feed ID",
+    "publisher": "Publisher",
+    "created": "Created by the publisher",
+    "downloaded": "Downloaded",
+    "imported": "Imported",
+    "servicePeriod": "Valid",
+    "servicePeriodRange": "{start} – {end}",
+    "unknown": "unknown",
+    "newTab": "(opens in a new tab)"
+  },
   "notFound": {
     "title": "Page not found",
     "message": "The page you are looking for does not exist or has been moved.",
