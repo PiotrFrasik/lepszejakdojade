@@ -583,3 +583,57 @@ map, or the browser's location. The API accepts `{ "stop_id" }` or `{ "lat", "lo
 **Consequences.**
 - Users cannot type a street address. They pick a stop or a point on the map.
 - Address geocoding is a follow-up, and it needs its own decision record when it is added.
+
+## 32. Stateless chat with no database table
+
+**Status:** accepted (2026-11-15, #18)
+
+**Context.** The assistant answers questions in a browser session. Accounts (#15) are planned, not built, so
+there is no user to attach a history to.
+
+**Decision.** `POST /api/v1/assistant/chat/` keeps no state. The browser keeps the conversation in
+`sessionStorage` and sends the last 20 messages with each request. The `assistant` app has no models and no
+migrations.
+
+**Alternatives.** Store conversations in PostgreSQL, keyed by a session or user. Not chosen for this feature;
+the reasons are not recorded here.
+
+**Consequences.**
+- Chat history is lost when the browser tab closes, and it is not visible on another device.
+- The server keeps no conversation data to review or delete.
+- Stored history, if wanted later, needs its own decision record.
+
+## 33. Chat language comes from `Accept-Language`
+
+**Status:** accepted (2026-11-15, #18)
+
+**Context.** Decision 6 makes `Accept-Language` the only language source for the API. An earlier draft of the chat
+contract had a `language` field in the request body, which would be a second source.
+
+**Decision.** The answer is written in the language negotiated from `Accept-Language`, whatever language the
+question is in. The request body has no `language` field. The rules are in `docs/api.md`, section "Language
+negotiation".
+
+**Alternatives.** A `language` body field (`pl` or `en`). Not chosen, because it would be a second language source.
+
+**Consequences.**
+- The client must send the `Accept-Language` header, as it does for every other endpoint.
+- A question in English sent with `Accept-Language: pl` gets a Polish answer.
+
+## 34. Departures cards carry a `stop_id` per departure
+
+**Status:** accepted (2026-11-15, #18, #19)
+
+**Context.** A departures card shows one stop group, and the card's `stop.stop_id` is the group's representative
+platform. Departures can leave from other platforms of the same group. The AI agent found that the contract had no
+per-departure stop, so a link to the stop timetable could point to the wrong platform.
+
+**Decision.** Each departure in a `departures` card has its own `stop_id`, the platform it leaves from. The link to
+the stop timetable uses that `stop_id`, together with `line.id` and `direction`.
+
+**Alternatives.** Use the card's representative `stop_id` for every departure. Rejected: the links can point to the
+wrong platform. The first frontend version did this; the tester found it and it was fixed.
+
+**Consequences.**
+- The departure object is larger by one field.
+- The contract gap was resolved in `docs/api.md` by the coordinator.
