@@ -142,7 +142,9 @@ feeds:
       static_feed: ztp_mobilis_bus
   other: []
 
-# PLACEHOLDER: real zone boundaries come with the ticket catalogue (#14).
+# Ticket zones of KMK (checked 2026-11-15 against https://ztp.krakow.pl/kmk/przewodnik-po-biletach-kmk):
+# I = the city of Kraków, II and III = agglomeration communes. Ticket ids in the catalogue (#14)
+# refer to these ids. Zone boundaries per stop are not modelled yet.
 ticket_zones:
   - id: "1"
     names: { pl: Strefa I, en: Zone I }

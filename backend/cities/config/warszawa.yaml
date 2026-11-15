@@ -101,7 +101,9 @@ feeds:
       kind: um_warszawa_api
       url: https://api.um.warszawa.pl/api/action/busestrams_get/
 
-# PLACEHOLDER: real zone boundaries come with the ticket catalogue (#14).
+# Ticket zones of ZTM Warszawa: 1 = the city of Warsaw (plus a few nearby stations),
+# 2 = suburban communes. Ticket ids in the catalogue (#14) refer to these ids. Zone boundaries
+# per stop are not modelled yet.
 ticket_zones:
   - id: "1"
     names: { pl: Strefa 1, en: Zone 1 }
