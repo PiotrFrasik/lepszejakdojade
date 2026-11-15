@@ -13,13 +13,7 @@ describe('AppHeader', () => {
   it('renders the navigation labels, city switcher and language toggle', async () => {
     const { wrapper } = await mountApp(AppHeader)
     const links = wrapper.findAll('.app-header__link').map((l) => l.text())
-    expect(links).toEqual([
-      pl.nav.home,
-      pl.nav.journey,
-      pl.nav.timetable,
-      pl.nav.tickets,
-      pl.nav.assistant,
-    ])
+    expect(links).toEqual([pl.nav.journey, pl.nav.timetable, pl.nav.tickets, pl.nav.assistant])
     expect(wrapper.find('select').exists()).toBe(true)
     expect(wrapper.find('.language-toggle').exists()).toBe(true)
   })
@@ -29,13 +23,7 @@ describe('AppHeader', () => {
     applyLocale('en')
     await nextTick()
     const links = wrapper.findAll('.app-header__link').map((l) => l.text())
-    expect(links).toEqual([
-      en.nav.home,
-      en.nav.journey,
-      en.nav.timetable,
-      en.nav.tickets,
-      en.nav.assistant,
-    ])
+    expect(links).toEqual([en.nav.journey, en.nav.timetable, en.nav.tickets, en.nav.assistant])
     expect(wrapper.find('nav').attributes('aria-label')).toBe(en.nav.label)
   })
 

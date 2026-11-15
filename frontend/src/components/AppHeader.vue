@@ -8,8 +8,8 @@ import LanguageToggle from '@/components/LanguageToggle.vue'
 const { t } = useI18n()
 
 const navItems = [
-  { to: { name: 'home' }, labelKey: 'nav.home', section: false },
-  { to: { name: 'journey' }, labelKey: 'nav.journey', section: true },
+  // Home is the journey planner.
+  { to: { name: 'home' }, labelKey: 'nav.journey', section: false },
   { to: { name: 'timetable' }, labelKey: 'nav.timetable', section: true },
   { to: { name: 'tickets' }, labelKey: 'nav.tickets', section: true },
   { to: { name: 'assistant' }, labelKey: 'nav.assistant', section: true },
@@ -134,6 +134,13 @@ function isSectionActive(item: (typeof navItems)[number]): boolean {
 .app-header :focus-visible {
   outline: 3px solid var(--color-focus-on-primary);
   outline-offset: 2px;
+}
+
+/* Phones navigate with the bottom tab bar instead. */
+@media (max-width: 719px) {
+  .app-header__nav {
+    display: none;
+  }
 }
 
 @media (min-width: 960px) {

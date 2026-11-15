@@ -4,6 +4,8 @@ declare module 'vue-router' {
   interface RouteMeta {
     /** i18n key of the page title (used for `document.title`). */
     titleKey?: string
+    /** Page fills the viewport (full-screen map): no footer, no page scrolling. */
+    fullscreen?: boolean
   }
 }
 
@@ -12,13 +14,14 @@ const HomeView = () => import('@/views/HomeView.vue')
 const PlaceholderView = () => import('@/views/PlaceholderView.vue')
 
 export const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'home', component: HomeView, meta: { titleKey: 'nav.home' } },
+  // Home is the journey planner (#13): full-screen map with the search panel.
   {
-    path: '/journey',
-    name: 'journey',
-    component: PlaceholderView,
-    meta: { titleKey: 'nav.journey' },
+    path: '/',
+    name: 'home',
+    component: HomeView,
+    meta: { titleKey: 'nav.journey', fullscreen: true },
   },
+  { path: '/journey', name: 'journey', redirect: { name: 'home' } },
   // Timetable browser (#11). Ids are opaque API ids; `?type=`, `?direction=1` and `?date=` keep
   // the tab, direction and service date in the URL. The city is not in the URL (it comes from the
   // city store), so a shared line or stop link only works for someone with the same city selected;
