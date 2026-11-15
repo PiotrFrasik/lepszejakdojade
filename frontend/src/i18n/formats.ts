@@ -10,6 +10,8 @@ import type { IntlDateTimeFormat, IntlNumberFormat } from 'vue-i18n'
 const dateTimeFormat = {
   /** Clock time, always 24-hour `HH:mm` (e.g. 08:14). */
   time: { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' },
+  /** Clock time with seconds, `HH:mm:ss` (e.g. "updated 21:04:10"). */
+  timeSeconds: { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' },
   /** Calendar date with a short month name (e.g. "14 lis 2026" / "Nov 14, 2026"). */
   date: { day: 'numeric', month: 'short', year: 'numeric' },
   /** Long date with weekday, e.g. for the timetable date picker heading. */
