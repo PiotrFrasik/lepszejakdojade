@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "transit_data",
     "timetable",
     "journeys",
+    "assistant",
 ]
 
 MIDDLEWARE = [
@@ -187,6 +188,14 @@ JOURNEY_COMPARISON_MAX_DURATION = 3 * 3600
 
 # Timeout (seconds) for dependency checks in the health endpoint
 HEALTH_CHECK_TIMEOUT = 2
+
+# AI assistant (assistant app). Free Gemini tier: Google may use prompts to improve its products.
+GEMINI_API_KEY = env_str("GEMINI_API_KEY")
+GEMINI_MODEL = env_str("GEMINI_MODEL") or "gemini-flash-latest"
+ASSISTANT_PROVIDER = env_str("ASSISTANT_PROVIDER") or "assistant.providers.gemini.GeminiProvider"
+ASSISTANT_TIMEOUT_SECONDS = env_float("ASSISTANT_TIMEOUT_SECONDS", 30.0, min_value=1)
+ASSISTANT_RATE_PER_MINUTE = env_str("ASSISTANT_RATE_PER_MINUTE") or "10/min"
+ASSISTANT_RATE_PER_DAY = env_str("ASSISTANT_RATE_PER_DAY") or "100/day"
 
 # Django REST Framework
 REST_FRAMEWORK = {
