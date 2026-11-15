@@ -8,6 +8,7 @@
 export const STORAGE_KEYS = {
   city: 'ljd.city',
   locale: 'ljd.locale',
+  timetableVehicleType: 'ljd.timetable.vehicleType',
 } as const
 
 export function readStorage(key: string): string | null {

@@ -1,5 +1,21 @@
 import { getCurrentLocale } from '@/i18n'
-import type { ApiErrorBody, City, CityDetail, CityId, HealthResponse } from '@/types/api'
+import type {
+  ApiErrorBody,
+  City,
+  CityDetail,
+  CityId,
+  DirectionId,
+  HealthResponse,
+  Line,
+  LineId,
+  LineRoute,
+  ServiceDate,
+  StopId,
+  StopTimetable,
+  Trip,
+  TripId,
+  VehicleType,
+} from '@/types/api'
 
 export const API_BASE = '/api/v1'
 
@@ -126,4 +142,69 @@ export function getCities(signal?: AbortSignal): Promise<City[]> {
 /** `GET /api/v1/cities/{city}/`: city settings. Unknown city → `ApiError` with status 404. */
 export function getCity(id: CityId, signal?: AbortSignal): Promise<CityDetail> {
   return apiGet<CityDetail>(`/cities/${encodeURIComponent(id)}/`, { signal })
+}
+
+function cityPath(city: CityId, rest: string): string {
+  return `/cities/${encodeURIComponent(city)}/${rest}`
+}
+
+/** `GET /api/v1/cities/{city}/lines/`: all lines (plain array), optionally of one vehicle type. */
+export function getLines(
+  city: CityId,
+  vehicleType?: VehicleType | null,
+  signal?: AbortSignal,
+): Promise<Line[]> {
+  return apiGet<Line[]>(cityPath(city, 'lines/'), {
+    signal,
+    query: { vehicle_type: vehicleType ?? undefined },
+  })
+}
+
+/** `direction` / `date` query of the timetable endpoints; omitted values use the API defaults. */
+export interface DirectionDateQuery {
+  direction?: DirectionId
+  date?: ServiceDate | null
+}
+
+/** `GET /api/v1/cities/{city}/lines/{line_id}/route/`: line diagram for one direction. */
+export function getLineRoute(
+  city: CityId,
+  lineId: LineId,
+  params: DirectionDateQuery = {},
+  signal?: AbortSignal,
+): Promise<LineRoute> {
+  return apiGet<LineRoute>(cityPath(city, `lines/${encodeURIComponent(lineId)}/route/`), {
+    signal,
+    query: { direction: params.direction, date: params.date ?? undefined },
+  })
+}
+
+/** `GET /api/v1/cities/{city}/lines/{line_id}/stops/{stop_id}/timetable/`. */
+export function getStopTimetable(
+  city: CityId,
+  lineId: LineId,
+  stopId: StopId,
+  params: DirectionDateQuery = {},
+  signal?: AbortSignal,
+): Promise<StopTimetable> {
+  return apiGet<StopTimetable>(
+    cityPath(
+      city,
+      `lines/${encodeURIComponent(lineId)}/stops/${encodeURIComponent(stopId)}/timetable/`,
+    ),
+    { signal, query: { direction: params.direction, date: params.date ?? undefined } },
+  )
+}
+
+/** `GET /api/v1/cities/{city}/trips/{trip_id}/?date=`: one trip on one service date. */
+export function getTrip(
+  city: CityId,
+  tripId: TripId,
+  date: ServiceDate,
+  signal?: AbortSignal,
+): Promise<Trip> {
+  return apiGet<Trip>(cityPath(city, `trips/${encodeURIComponent(tripId)}/`), {
+    signal,
+    query: { date },
+  })
 }
