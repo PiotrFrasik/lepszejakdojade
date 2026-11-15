@@ -12,7 +12,8 @@
     "timetable": "Rozkłady jazdy",
     "tickets": "Bilety",
     "assistant": "Asystent",
-    "dataSources": "Źródła danych"
+    "dataSources": "Źródła danych",
+    "tabsLabel": "Sekcje"
   },
   "city": {
     "label": "Miasto",
@@ -184,6 +185,100 @@
     "distance": {
       "metres": "{value} m",
       "kilometres": "{value} km"
+    }
+  },
+  "journey": {
+    "title": "Zaplanuj podróż",
+    "panelLabel": "Wyszukiwarka połączeń",
+    "mapUnavailable": "Ta przeglądarka nie może wyświetlić mapy (wymagany WebGL 2). Nadal możesz szukać po nazwie przystanku.",
+    "from": "Skąd",
+    "to": "Dokąd",
+    "placeholder": "Nazwa przystanku",
+    "swap": "Zamień początek i cel",
+    "myLocation": "Użyj mojej lokalizacji",
+    "locating": "Ustalanie lokalizacji…",
+    "pickOnMap": "Wskaż na mapie",
+    "pickingFrom": "Kliknij mapę, aby wskazać, skąd jedziesz.",
+    "pickingTo": "Kliknij mapę, aby wskazać, dokąd jedziesz.",
+    "cancelPicking": "Anuluj",
+    "search": "Szukaj połączeń",
+    "place": {
+      "mapPoint": "Punkt na mapie",
+      "myLocation": "Moja lokalizacja"
+    },
+    "autocomplete": {
+      "searching": "Szukanie przystanków…",
+      "noResults": "Brak przystanków pasujących do „{query}”.",
+      "error": "Nie udało się wyszukać przystanków. Spróbuj ponownie.",
+      "count": "Znalezione przystanki: {count}. Wybierz strzałkami."
+    },
+    "locationErrors": {
+      "unsupported": "Ta przeglądarka nie udostępnia lokalizacji. Wybierz przystanek lub punkt na mapie.",
+      "denied": "Odmówiono dostępu do lokalizacji. Zezwól na nią w ustawieniach przeglądarki albo wskaż punkt na mapie.",
+      "unavailable": "Lokalizacja jest teraz niedostępna. Spróbuj ponownie albo wskaż punkt na mapie.",
+      "timeout": "Ustalanie lokalizacji trwało zbyt długo. Spróbuj ponownie."
+    },
+    "time": {
+      "label": "Kiedy",
+      "now": "Teraz",
+      "depart": "Odjazd o",
+      "arrive": "Przyjazd do",
+      "inputLabel": "Data i godzina"
+    },
+    "options": {
+      "title": "Opcje",
+      "titleActive": "Opcje ({count})",
+      "fewer_transfers": "Mniej przesiadek",
+      "less_walking": "Mniej chodzenia",
+      "wheelchair": "Dostępne dla wózków"
+    },
+    "problems": {
+      "missing_from": "Wybierz, skąd jedziesz.",
+      "missing_to": "Wybierz, dokąd jedziesz.",
+      "same_place": "Początek i cel to to samo miejsce.",
+      "invalid_time": "Podaj poprawną datę i godzinę."
+    },
+    "yourJourneys": {
+      "title": "Twoje podróże",
+      "empty": "Tu pojawią się ostatnie wyszukiwania i ulubione trasy."
+    },
+    "results": {
+      "title": "Połączenia",
+      "close": "Wróć do wyszukiwania",
+      "loading": "Szukanie połączeń…",
+      "count": "Znalezione połączenia: {count}",
+      "empty": "Nie znaleziono połączeń. Spróbuj innej godziny lub innych miejsc.",
+      "unavailable": "Wyszukiwarka połączeń jest chwilowo niedostępna. Spróbuj za kilka minut."
+    },
+    "itinerary": {
+      "label": "Połączenie {index}: od {start} do {end}, {duration}",
+      "times": "{start} – {end}",
+      "noTransfers": "Bez przesiadek",
+      "transfers": "Przesiadki: {count}",
+      "walking": "Pieszo: {distance}",
+      "showDetails": "Pokaż szczegóły",
+      "hideDetails": "Ukryj szczegóły"
+    },
+    "leg": {
+      "walk": "Pieszo {distance} ({duration})",
+      "towards": "kierunek {headsign}",
+      "stops": "Przystanki po drodze: {count}",
+      "lineLink": "Rozkład linii {line}",
+      "unnamed": "Miejsce bez nazwy",
+      "modes": {
+        "walk": "Pieszo",
+        "tram": "Tramwaj",
+        "bus": "Autobus",
+        "metro": "Metro",
+        "rail": "Pociąg"
+      }
+    },
+    "comparison": {
+      "title": "Bez komunikacji miejskiej",
+      "walk": "Pieszo",
+      "bike": "Rowerem",
+      "value": "{duration} · {distance}",
+      "unavailable": "niedostępne"
     }
   }
 }

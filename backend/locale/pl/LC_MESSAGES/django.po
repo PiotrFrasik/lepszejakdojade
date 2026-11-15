@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 20:02+0100\n"
+"POT-Creation-Date: 2026-11-15 09:55+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,15 +19,15 @@ msgstr ""
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
-#: cities/views.py:61 timetable/views.py:66
+#: cities/views.py:61 journeys/views.py:73 timetable/views.py:70
 msgid "City not found."
 msgstr "Nie znaleziono miasta."
 
-#: config/settings/base.py:132
+#: config/settings/base.py:133
 msgid "Polish"
 msgstr "polski"
 
-#: config/settings/base.py:133
+#: config/settings/base.py:134
 msgid "English"
 msgstr "angielski"
 
@@ -134,7 +134,27 @@ msgstr "Nie znaleziono."
 msgid "A server error occurred."
 msgstr "Wystąpił błąd serwera."
 
-#: timetable/serializers.py:32
+#: journeys/serializers.py:48
+msgid "Give either a stop_id or both lat and lon."
+msgstr "Podaj albo stop_id, albo lat i lon."
+
+#: journeys/views.py:31
+msgid "The journey planner is unavailable. Try again later."
+msgstr "Wyszukiwarka połączeń jest niedostępna. Spróbuj ponownie później."
+
+#: journeys/views.py:42
+msgid "Unknown stop."
+msgstr "Nieznany przystanek."
+
+#: journeys/views.py:46
+msgid "This point is outside the city's area."
+msgstr "Ten punkt leży poza obszarem miasta."
+
+#: journeys/views.py:105
+msgid "The start and the destination must be different."
+msgstr "Punkt startowy i docelowy muszą być różne."
+
+#: timetable/serializers.py:33
 msgid "Date is out of range."
 msgstr "Data jest poza obsługiwanym zakresem."
 
@@ -142,26 +162,26 @@ msgstr "Data jest poza obsługiwanym zakresem."
 msgid "Enter at least 2 characters."
 msgstr "Wpisz co najmniej 2 znaki."
 
-#: timetable/views.py:77
+#: timetable/views.py:81
 msgid "Line not found."
 msgstr "Nie znaleziono linii."
 
-#: timetable/views.py:85
+#: timetable/views.py:89
 msgid "This line does not run in this direction."
 msgstr "Ta linia nie kursuje w tym kierunku."
 
-#: timetable/views.py:157
+#: timetable/views.py:161
 msgid "Stop not found."
 msgstr "Nie znaleziono przystanku."
 
-#: timetable/views.py:160
+#: timetable/views.py:165
 msgid "This line does not stop here in this direction."
 msgstr "Ta linia nie zatrzymuje się na tym przystanku w tym kierunku."
 
-#: timetable/views.py:186
+#: timetable/views.py:189
 msgid "Trip not found."
 msgstr "Nie znaleziono kursu."
 
-#: timetable/views.py:189
+#: timetable/views.py:192
 msgid "This trip does not run on this date."
 msgstr "Ten kurs nie odbywa się w tym dniu."
