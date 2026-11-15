@@ -519,3 +519,72 @@ export interface ChatResponse {
   /** 0–3 cards. Typed as `unknown` because clients must ignore card types they do not know. */
   cards: unknown[]
 }
+
+// ---------------------------------------------------------------------------
+// Tickets (#14)
+// ---------------------------------------------------------------------------
+
+/**
+ * `single` (one ride, no transfers), `time` (unlimited rides for `validity_minutes`), `daily`
+ * (`validity_minutes` = 1440 × days), `period` (7 days or longer, informational).
+ */
+export type TicketKind = 'single' | 'time' | 'daily' | 'period'
+
+/** Zone id from the city config `ticket_zones`. */
+export type TicketZoneId = string
+
+/** One ticket of a city catalogue; `name` / `description` in the request language. */
+export interface Ticket {
+  /** Stable slug, unique across cities. */
+  id: string
+  name: string
+  description: string
+  kind: TicketKind
+  /** `null` for `single`. */
+  validity_minutes: number | null
+  /** Never empty. */
+  zones: TicketZoneId[]
+  reduced: boolean
+  /** Decimal string with two places (`"6.00"`); never do float arithmetic on it. */
+  price: string
+  /** ISO 4217 code, e.g. `PLN`. */
+  currency: string
+  /** Date the price was checked, `YYYY-MM-DD`. */
+  prices_as_of: string
+  /** Official price list. */
+  source_url: string
+}
+
+/** Ticket zone of a city; `name` in the request language. */
+export interface TicketZone {
+  id: TicketZoneId
+  name: string
+}
+
+/** `GET /api/v1/cities/{city}/tickets/` → `200` (not paginated). */
+export interface TicketCatalogue {
+  /** Config order. */
+  zones: TicketZone[]
+  /** Sorted by kind, validity, number of zones, `reduced` (`false` first), id. */
+  tickets: Ticket[]
+}
+
+/** Body of `POST /api/v1/cities/{city}/tickets/suggest/`. */
+export interface TicketSuggestRequest {
+  /** Integer, 1 … 86400. */
+  duration_seconds: number
+  /** Integer ≥ 0, API default `0`. */
+  transfers?: number
+  /** API default: the city's first zone. */
+  zones?: TicketZoneId[]
+  /** API default `false`. */
+  reduced?: boolean
+}
+
+/** `POST /api/v1/cities/{city}/tickets/suggest/` → `200`. */
+export interface TicketSuggestResponse {
+  /** `null` when no ticket covers the journey. */
+  ticket: Ticket | null
+  /** One sentence in the request language, built by the server; shown as is. */
+  reason: string
+}
