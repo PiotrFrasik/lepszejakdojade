@@ -11,7 +11,12 @@
   --color-border: #d5dbe3;
   --color-success: #1e8e3e;
   --color-warning: #c77700;
+  /* Warning colour for small text on white (contrast ≥ 4.5:1). */
+  --color-warning-text: #8a4b00;
+  --color-highlight: #fff4cc;
   --color-danger: #c62828;
+  --color-danger-surface: #fdf1f1;
+  --color-primary-hover: #094c8f;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -98,6 +103,60 @@ a {
 .page h1 {
   margin-top: 0;
   font-size: 1.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-surface-alt);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.button--primary:hover {
+  background: var(--color-primary-hover);
+}
+
+@media print {
+  .app-header,
+  .app-footer,
+  .skip-link,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    min-width: 0;
+    font-size: 11pt;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

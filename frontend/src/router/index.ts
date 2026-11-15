@@ -19,11 +19,27 @@ export const routes: RouteRecordRaw[] = [
     component: PlaceholderView,
     meta: { titleKey: 'nav.journey' },
   },
+  // Timetable browser (#11). Ids are opaque API ids; `?type=`, `?direction=1` and `?date=` keep
+  // the tab, direction and service date in the URL. The city is not in the URL (it comes from the
+  // city store), so a shared line or stop link only works for someone with the same city selected;
+  // switching city sends the user back to `/timetable`.
   {
     path: '/timetable',
     name: 'timetable',
-    component: PlaceholderView,
+    component: () => import('@/views/timetable/TimetableHomeView.vue'),
     meta: { titleKey: 'nav.timetable' },
+  },
+  {
+    path: '/timetable/lines/:lineId',
+    name: 'timetable-line',
+    component: () => import('@/views/timetable/LineView.vue'),
+    meta: { titleKey: 'timetable.lineDiagram' },
+  },
+  {
+    path: '/timetable/lines/:lineId/stops/:stopId',
+    name: 'timetable-stop',
+    component: () => import('@/views/timetable/StopTimetableView.vue'),
+    meta: { titleKey: 'timetable.stopTimetable' },
   },
   {
     path: '/tickets',
