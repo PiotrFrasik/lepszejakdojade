@@ -20,6 +20,9 @@ import type {
   StopOverview,
   StopSearchResult,
   StopTimetable,
+  TicketCatalogue,
+  TicketSuggestRequest,
+  TicketSuggestResponse,
   Trip,
   TripId,
   VehicleType,
@@ -302,4 +305,35 @@ export function searchJourneys(
  */
 export function sendChat(request: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
   return apiRequest<ChatResponse>('/assistant/chat/', { method: 'POST', body: request, signal })
+}
+
+/**
+ * `GET /api/v1/cities/{city}/tickets/?reduced=`: the whole ticket catalogue of a city (not
+ * paginated). `reduced` omitted = both fare variants. Unknown city → `ApiError` with status 404.
+ */
+export function getTickets(
+  city: CityId,
+  params: { reduced?: boolean } = {},
+  signal?: AbortSignal,
+): Promise<TicketCatalogue> {
+  return apiGet<TicketCatalogue>(cityPath(city, 'tickets/'), {
+    signal,
+    query: { reduced: params.reduced },
+  })
+}
+
+/**
+ * `POST /api/v1/cities/{city}/tickets/suggest/`: cheapest ticket covering one journey. A `200`
+ * with `ticket: null` means nothing matches; bad body → `ApiError` 400 `validation_error`.
+ */
+export function suggestTicket(
+  city: CityId,
+  request: TicketSuggestRequest,
+  signal?: AbortSignal,
+): Promise<TicketSuggestResponse> {
+  return apiRequest<TicketSuggestResponse>(cityPath(city, 'tickets/suggest/'), {
+    method: 'POST',
+    body: request,
+    signal,
+  })
 }

@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   city: 'ljd.city',
   locale: 'ljd.locale',
   timetableVehicleType: 'ljd.timetable.vehicleType',
+  /** `'true'` when the reduced fare is selected on the tickets page (also used by the ticket hint). */
+  ticketsReduced: 'ljd.tickets.reduced',
 } as const
 
 export function readStorage(key: string): string | null {

@@ -11,7 +11,6 @@ declare module 'vue-router' {
 
 // Lazy-loaded so the large MapLibre bundle does not block the app shell.
 const HomeView = () => import('@/views/HomeView.vue')
-const PlaceholderView = () => import('@/views/PlaceholderView.vue')
 
 export const routes: RouteRecordRaw[] = [
   // Home is the journey planner (#13): full-screen map with the search panel.
@@ -52,10 +51,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/timetable/StopDeparturesView.vue'),
     meta: { titleKey: 'timetable.stopPage' },
   },
+  // Ticket catalogue of the selected city (#82); purchase flow comes later (#17).
   {
     path: '/tickets',
     name: 'tickets',
-    component: PlaceholderView,
+    component: () => import('@/views/TicketsView.vue'),
     meta: { titleKey: 'nav.tickets' },
   },
   {

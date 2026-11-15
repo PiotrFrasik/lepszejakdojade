@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api/client'
 import ItineraryCard from '@/components/journey/ItineraryCard.vue'
 import ModeIcon from '@/components/journey/ModeIcon.vue'
+import TicketHint from '@/components/journey/TicketHint.vue'
 import { useFormat } from '@/composables/useFormat'
 import { useJourneyStore } from '@/stores/journey'
 import type { DirectTrip } from '@/types/api'
@@ -18,6 +19,9 @@ const expandedId = ref<string | null>(null)
 
 const itineraries = computed(() => journey.result?.itineraries ?? [])
 const comparison = computed(() => journey.result?.comparison ?? null)
+const selectedIndex = computed(() =>
+  itineraries.value.findIndex((item) => item.id === journey.selectedItinerary?.id),
+)
 
 const errorText = computed(() => {
   const err = journey.error
@@ -96,6 +100,12 @@ watch(
           />
         </li>
       </ol>
+
+      <TicketHint
+        v-if="journey.selectedItinerary && selectedIndex >= 0"
+        :itinerary="journey.selectedItinerary"
+        :index="selectedIndex"
+      />
 
       <div v-if="comparison" class="journey-results__comparison">
         <h3 class="journey-results__subtitle">{{ t('journey.comparison.title') }}</h3>
