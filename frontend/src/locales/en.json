@@ -302,5 +302,48 @@
       "value": "{duration} · {distance}",
       "unavailable": "not available"
     }
+  },
+  "assistant": {
+    "title": "Assistant",
+    "open": "Open the assistant",
+    "close": "Close the assistant",
+    "clear": "New conversation",
+    "intro": "Ask about departures, connections or stops in {city}. The assistant answers only from the timetable data of this app.",
+    "introNoCity": "Choose a city first to ask the assistant.",
+    "suggestionsTitle": "Try asking",
+    "suggestions": {
+      "departures": "When are the next departures from the main railway station?",
+      "journey": "How do I get from the main railway station to the airport?",
+      "lines": "Which lines stop at the main railway station?"
+    },
+    "conversationLabel": "Conversation with the assistant",
+    "you": "You",
+    "assistantName": "Assistant",
+    "typing": "The assistant is typing…",
+    "announceAnswer": "Assistant: {text}",
+    "inputLabel": "Your question",
+    "placeholder": "Ask about a departure or a journey…",
+    "send": "Send",
+    "counter": "{count} / {max}",
+    "tooLong": "The question is too long (at most {max} characters).",
+    "emptyAnswer": "The assistant did not reply with any text.",
+    "dismiss": "Dismiss",
+    "problems": {
+      "validation": "The question could not be processed. Rephrase it and try again.",
+      "rateLimited": "You have asked too many questions. You can ask again in {seconds} s.",
+      "rateLimitedWait": "You have asked too many questions. Wait a moment and try again.",
+      "rateLimitedOver": "You can ask again now.",
+      "unavailable": "The assistant is unavailable right now. Try again later, or use the journey planner and timetables."
+    },
+    "cards": {
+      "journeyTitle": "{from} → {to}",
+      "showOnMap": "Show on the map",
+      "departuresTitle": "Departures from {stop}",
+      "departureLink": "Line {line} towards {headsign} at {time}. Open the stop timetable",
+      "departureLinkDay": "Line {line} towards {headsign} at {time}, {day}. Open the stop timetable",
+      "stopsTitle": "Matching stops",
+      "stopQuestion": "Next departures from {stop}",
+      "stopAsk": "Ask about {stop}"
+    }
   }
 }

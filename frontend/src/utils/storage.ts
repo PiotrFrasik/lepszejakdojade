@@ -34,3 +34,32 @@ export function removeStorage(key: string): void {
     // Ignore.
   }
 }
+
+/** Keys kept in `sessionStorage` (this browser tab only). */
+export const SESSION_KEYS = {
+  assistantConversation: 'ljd.assistant.conversation',
+} as const
+
+export function readSession(key: string): string | null {
+  try {
+    return window.sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+export function writeSession(key: string, value: string): void {
+  try {
+    window.sessionStorage.setItem(key, value)
+  } catch {
+    // Ignore: the value simply will not survive a reload.
+  }
+}
+
+export function removeSession(key: string): void {
+  try {
+    window.sessionStorage.removeItem(key)
+  } catch {
+    // Ignore.
+  }
+}
