@@ -250,3 +250,41 @@ class StopDeparturesSerializer(serializers.Serializer):
     generated_at = serializers.CharField(help_text="ISO 8601 with offset, city time zone.")
     realtime_available = serializers.BooleanField()
     departures = StopDepartureSerializer(many=True)
+
+
+# -------------------------------------------------------------------- stop overview
+
+
+class OverviewStopSerializer(serializers.Serializer):
+    id = serializers.CharField(help_text="The requested stop id.")
+    name = serializers.CharField(help_text="Stop group name.")
+    lat = serializers.FloatField(help_text="Group centroid.")
+    lon = serializers.FloatField(help_text="Group centroid.")
+    vehicle_types = serializers.ListField(
+        child=serializers.ChoiceField(choices=VEHICLE_TYPES),
+        help_text="Vehicle types serving the group.",
+    )
+    stop_ids = serializers.ListField(
+        child=serializers.CharField(), help_text="All platforms of the stop group."
+    )
+
+
+class OverviewDirectionSerializer(serializers.Serializer):
+    direction = serializers.IntegerField(min_value=0)
+    headsign = serializers.CharField(allow_blank=True)
+    platform_id = serializers.CharField(
+        help_text="Platform of the group where most trips of this line and direction depart; "
+        "valid input for the stop timetable endpoint with this line and direction."
+    )
+
+
+class OverviewLineSerializer(serializers.Serializer):
+    line = LineSummarySerializer()
+    directions = OverviewDirectionSerializer(
+        many=True, help_text="Directions in which the line departs from the group."
+    )
+
+
+class StopOverviewSerializer(serializers.Serializer):
+    stop = OverviewStopSerializer()
+    lines = OverviewLineSerializer(many=True)

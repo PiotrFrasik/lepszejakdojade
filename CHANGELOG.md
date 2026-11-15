@@ -9,6 +9,10 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Stop view (#9, #56): `GET /api/v1/cities/{city}/stops/{stop_id}/` returns the lines serving a stop group with
+  their directions, each linked to the stop timetable. Directions are cached for 24 h per route. The stop page at
+  `/timetable/stops/:stopId` shows the "Lines at this stop" list below the departures board. Both requests load in
+  parallel and fail on their own.
 - Live departures board (#73, #74): `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=` returns the next
   departures of a stop group. Times come from the static timetable; live times come from the realtime collector when
   they are fresh (`realtime_available`). Each departure has an expected time, a delay and a status (`live`,

@@ -142,6 +142,24 @@ def group_of_platform(city: City, feeds: Feeds, stop_id: str) -> StopGroup | Non
     return None
 
 
+def group_vehicle_types(city: City, feeds: Feeds, groups: list[StopGroup]) -> list[list[str]]:
+    """Vehicle types of the lines whose trips call at each group (any trip), in
+    VEHICLE_TYPES order."""
+    stop_pks = {p.pk for group in groups for p in group.platforms}
+    routes = _routes_at_stops(stop_pks)
+    lines = lines_by_pk(city, feeds, set().union(*routes.values()) if routes else set())
+    result = []
+    for group in groups:
+        types = {
+            lines[route_pk].vehicle_type
+            for p in group.platforms
+            for route_pk in routes.get(p.pk, ())
+            if route_pk in lines
+        }
+        result.append([t for t in VEHICLE_TYPES if t in types])
+    return result
+
+
 def _is_word_prefix(key: str, query: str) -> bool:
     """True when ``query`` starts at the beginning of a word of ``key``."""
     start = key.find(query)
@@ -165,24 +183,15 @@ def search_stops(city: City, feeds: Feeds, q: str) -> list[dict]:
                 break
     groups = (prefix + other)[:MAX_RESULTS]
 
-    stop_pks = {p.pk for group in groups for p in group.platforms}
-    routes = _routes_at_stops(stop_pks)
-    lines = lines_by_pk(city, feeds, set().union(*routes.values()) if routes else set())
     results = []
-    for group in groups:
-        types = {
-            lines[route_pk].vehicle_type
-            for p in group.platforms
-            for route_pk in routes.get(p.pk, ())
-            if route_pk in lines
-        }
+    for group, types in zip(groups, group_vehicle_types(city, feeds, groups), strict=True):
         results.append(
             {
                 "stop_id": group.stop_id,
                 "name": group.name,
                 "lat": group.lat,
                 "lon": group.lon,
-                "vehicle_types": [t for t in VEHICLE_TYPES if t in types],
+                "vehicle_types": types,
                 "stop_ids": [p.stop_id for p in group.platforms],
             }
         )

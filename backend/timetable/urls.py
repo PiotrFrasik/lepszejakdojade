@@ -4,6 +4,7 @@ from .views import (
     LineListView,
     LineRouteView,
     StopDeparturesView,
+    StopOverviewView,
     StopSearchView,
     StopTimetableView,
     TripView,
@@ -33,5 +34,12 @@ urlpatterns = [
         "cities/<str:city>/stops/<path:stop_id>/departures/",
         StopDeparturesView.as_view(),
         name="stop-departures",
+    ),
+    # Must stay after the other `stops/<path:stop_id>/...` routes: `path` would swallow
+    # their suffixes.
+    path(
+        "cities/<str:city>/stops/<path:stop_id>/",
+        StopOverviewView.as_view(),
+        name="stop-overview",
     ),
 ]
