@@ -9,6 +9,19 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Journey search API (#12): `POST /api/v1/cities/{city}/journeys/search/` in the new `journeys` app. It calls
+  the city's OpenTripPlanner 2 instance through its GraphQL API (`/otp/gtfs/v1`, 10 s timeout). Returns up
+  to 5 itineraries with legs, geometry, and walk and bike comparison. Preferences: fewer transfers, less
+  walking, wheelchair (preferred, not excluded). Any OTP failure returns `503 journey_planner_unavailable`.
+  Settings `OTP_TIMEOUT_SECONDS`, `JOURNEY_FEWER_TRANSFERS_COST`, `JOURNEY_LESS_WALKING_RELUCTANCE` and
+  `JOURNEY_COMPARISON_MAX_DURATION`.
+- Stop search API (#59): `GET /api/v1/cities/{city}/stops/?q=` in the `timetable` app. Matching ignores
+  diacritics, platforms with the same name within 300 m are grouped, at most 20 results, cached for 24 h and
+  keyed by the active feed versions.
+- Journey search UI (#13): the home page `/` is a map with a journey panel (floating on desktop, top panel and
+  bottom tab bar on phones). `/journey` redirects to `/`. Stop autocomplete, map picking, my location, swap,
+  depart or arrive time in the city's timezone, preferences, results with a route on the map, and walk and
+  bike comparison.
 - Static GTFS import (#7): `FeedVersion`, `Agency`, `Stop`, `Route`, `Calendar`, `CalendarDate`,
   `Shape`, `Trip`, `StopTime` and `Frequency` models in `transit_data`. Each import is a new version
   loaded with PostgreSQL `COPY` and switched to active in one transaction. Includes the
