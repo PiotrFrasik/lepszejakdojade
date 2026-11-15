@@ -9,6 +9,7 @@ import type { PlaceValue } from '@/utils/journey'
 /**
  * One end of the journey: a stop name field with autocomplete (WAI-ARIA combobox), plus
  * "my location" and "choose on the map" buttons. Typing clears the chosen place.
+ * With `hideActions` it is a plain stop search (e.g. the timetable's stop departures entry).
  */
 const props = defineProps<{
   id: string
@@ -19,6 +20,10 @@ const props = defineProps<{
   picking?: boolean
   /** Error text shown under the field (e.g. geolocation problem). */
   errorText?: string | null
+  /** Hides the "my location" and "choose on the map" buttons (stop-only search). */
+  hideActions?: boolean
+  /** Defaults to the journey form's "stop name" placeholder. */
+  placeholder?: string
 }>()
 
 const emit = defineEmits<{
@@ -204,7 +209,7 @@ onBeforeUnmount(cancelPending)
           :aria-activedescendant="activeIndex >= 0 ? `${id}-opt-${activeIndex}` : undefined"
           :aria-describedby="errorText ? `${statusId} ${errorId}` : statusId"
           :aria-invalid="errorText ? true : undefined"
-          :placeholder="t('journey.placeholder')"
+          :placeholder="placeholder ?? t('journey.placeholder')"
           :value="displayValue"
           @input="onInput"
           @keydown="onKeydown"
@@ -233,6 +238,7 @@ onBeforeUnmount(cancelPending)
         </ul>
       </div>
       <button
+        v-if="!hideActions"
         type="button"
         class="place-input__icon-button"
         :aria-label="t('journey.myLocation')"
@@ -253,6 +259,7 @@ onBeforeUnmount(cancelPending)
         </svg>
       </button>
       <button
+        v-if="!hideActions"
         type="button"
         class="place-input__icon-button"
         :class="{ 'place-input__icon-button--on': picking }"
