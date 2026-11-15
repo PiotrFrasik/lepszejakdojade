@@ -60,7 +60,7 @@ Content-Language: en
 | Vehicles (live) | `GET /cities/{city}/vehicles/?bbox=` |
 | Alerts | `GET /cities/{city}/alerts/?line=` |
 | Delay stats | `GET /cities/{city}/lines/{line_id}/delay-stats/?stop_id=` |
-| Tickets | `GET /cities/{city}/tickets/`, `POST /cities/{city}/tickets/suggest/` |
+| Tickets (#14) | `GET /cities/{city}/tickets/?reduced=`, `POST /cities/{city}/tickets/suggest/` |
 | Demo purchase 🔒 | `POST /orders/`, `GET /orders/{id}/`, `GET /my/tickets/` |
 | Account | `POST /auth/register/`, `POST /auth/login/`, `POST /auth/logout/`, `GET /auth/me/`, `PATCH /auth/me/` (incl. `language`) |
 | Favourites 🔒 | `GET/POST/DELETE /my/favourites/` |
@@ -451,6 +451,84 @@ Next departures are not part of this response; clients call `…/stops/{stop_id}
 - An empty `lines` list is valid (`200`).
 - Response header `Cache-Control: max-age=300`.
 - Errors: unknown city or stop → `404 not_found`.
+
+## Tickets (#14)
+Ticket catalogue per city, stored in the database and edited in the Django admin. No auth. Read only.
+Shared rules for both endpoints:
+- **Translated fields:** `name` and `description` are one string in the negotiated language (django-modeltranslation,
+  empty `en` → `pl` value). Zone `name` comes from the city config `ticket_zones[].names` in the same language.
+- **Money:** `price` is a decimal string with two places (`"6.00"`), `currency` is an ISO 4217 code (`"PLN"`).
+  Clients format it for the selected language; they never do arithmetic on it as a float.
+- **Ticket object:**
+```json
+{
+  "id": "krakow-time-60-z1",
+  "name": "60-minute ticket",
+  "description": "Unlimited rides for 60 minutes in Zone I.",
+  "kind": "time",
+  "validity_minutes": 60,
+  "zones": ["1"],
+  "reduced": false,
+  "price": "6.00",
+  "currency": "PLN",
+  "prices_as_of": "2026-11-01",
+  "source_url": "https://ztp.krakow.pl/bilety"
+}
+```
+  - `id`: stable slug, unique across cities.
+  - `kind`: `single` (one ride, no transfers), `time` (unlimited rides for `validity_minutes`), `daily`
+    (24 h / 48 h / 72 h …, `validity_minutes` = 1440 × days), `period` (7 days or longer, informational).
+  - `validity_minutes`: `null` for `single`.
+  - `zones`: ids from the city config `ticket_zones`, never empty; a ticket covers a journey only if it covers all
+    the journey's zones.
+  - `reduced`: reduced-fare variant (separate ticket object, separate price).
+  - `prices_as_of`: date the price was checked (`YYYY-MM-DD`); `source_url`: official price list.
+- Only active tickets (admin flag) are returned.
+- Errors: unknown city → `404 not_found`.
+
+### `GET /api/v1/cities/{city}/tickets/?reduced=true|false` (#14)
+Whole catalogue of the city. **Not paginated.** Optional `reduced` filter (omitted or empty = both). Any other
+value than `true` / `false` → `400 validation_error`.
+```json
+{
+  "zones": [ { "id": "1", "name": "Zone I" }, { "id": "2", "name": "Zone II" } ],
+  "tickets": [ { "...": "ticket object" } ]
+}
+```
+- `zones`: the city's `ticket_zones` in config order.
+- `tickets`: sorted by `kind` (`single`, `time`, `daily`, `period`), then `validity_minutes` ascending, then the number
+  of zones ascending, then `reduced` (`false` first), then `id`.
+- Response header `Cache-Control: max-age=300`.
+
+### `POST /api/v1/cities/{city}/tickets/suggest/` (#14)
+Cheapest ticket that covers one journey. Clients call it for a journey result (#12) using its `duration` and
+`transfers`.
+Request:
+```json
+{ "duration_seconds": 1680, "transfers": 1, "zones": ["1"], "reduced": false }
+```
+- `duration_seconds`: required integer, 1 … 86400.
+- `transfers`: optional integer ≥ 0, default `0`. `single` tickets are considered only when it is `0`.
+- `zones`: optional list of zone ids from the city config, default the city's first zone. Unknown zone id or empty
+  list → `400 validation_error`. A city with no `ticket_zones` in its config and `zones` omitted → also
+  `400 validation_error`.
+- `reduced`: optional, default `false`; only tickets with the same `reduced` value are considered.
+
+Selection: among active tickets of the city with kind `single` or `time` (never `daily` / `period`), keep those that
+cover all requested `zones` and whose `validity_minutes × 60 ≥ duration_seconds` (`single`: any duration, only with
+0 transfers). Pick the lowest `price`; ties: shorter `validity_minutes`, then fewer zones, then `id`.
+
+Response `200 OK`:
+```json
+{
+  "ticket": { "...": "ticket object" },
+  "reason": "A 60-minute ticket covers this 28-minute journey in Zone I."
+}
+```
+- `ticket`: `null` when nothing matches (e.g. the journey is longer than any time ticket). `reason` then says so.
+- `reason`: one short sentence in the negotiated language (Django translations), built by the server; clients show it
+  as is.
+- Errors: unknown city → `404 not_found`; bad body → `400 validation_error` with `details`.
 
 ## Assistant (#18)
 
