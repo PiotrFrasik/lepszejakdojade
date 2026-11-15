@@ -15,4 +15,4 @@ extend-exclude = ["*/migrations/*"]
 select = ["E", "W", "F", "I", "B", "UP", "DJ", "SIM"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "core", "cities", "transit_data", "timetable", "assistant"]
+known-first-party = ["config", "core", "cities", "transit_data", "timetable", "tickets", "assistant"]

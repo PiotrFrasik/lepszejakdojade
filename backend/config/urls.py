@@ -9,6 +9,7 @@ api_v1_patterns = [
     path("", include("cities.urls")),
     path("", include("timetable.urls")),
     path("", include("journeys.urls")),
+    path("", include("tickets.urls")),
     path("", include("assistant.urls")),
 ]
 
