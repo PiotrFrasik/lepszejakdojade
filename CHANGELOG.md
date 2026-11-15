@@ -9,6 +9,10 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Data sources (#25, #29): `GET /api/v1/data-sources/` returns each city's licence attributions and the
+  age of its active static feeds (created, retrieved, imported, service dates). Attributions take optional
+  `descriptions` (pl and en) in the city config. A Data sources page shows them per city, with a notice
+  that the data was processed.
 - Journey search API (#12): `POST /api/v1/cities/{city}/journeys/search/` in the new `journeys` app. It calls
   the city's OpenTripPlanner 2 instance through its GraphQL API (`/otp/gtfs/v1`, 10 s timeout). Returns up
   to 5 itineraries with legs, geometry, and walk and bike comparison. Preferences: fewer transfers, less

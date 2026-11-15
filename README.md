@@ -18,6 +18,8 @@ The app is bilingual (Polish / English) with a language switcher.
 - **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
   my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
   a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
+- **Data sources** (built, #25, #29): a Data sources page with the licence attributions of each city's data
+  and the age of its timetables. API: [docs/api.md](docs/api.md#data-sources-25).
 - **Planned:** live departures and vehicles (#20, #21), delay statistics and predictions (#22, #23),
   tickets (demo), AI assistant (#18, #19).
 
@@ -110,8 +112,8 @@ City configuration lives in `backend/cities/config/<id>.yaml`, one file per city
 - Files are validated strictly at startup. A broken file stops `runserver`, `migrate` and every
   management command. The error names the file and the field.
 - Optional: set `CITY_CONFIG_DIR` in `.env` to load city files from another directory.
-- Public fields are exposed via `GET /api/v1/cities/`. Internal fields (feeds, ticket zones,
-  attributions) are not exposed.
+- Public fields are exposed via `GET /api/v1/cities/`. Internal fields (feeds, ticket zones) are not
+  exposed. Attributions are served by `GET /api/v1/data-sources/`.
 - A `gtfs_static` feed can have an optional `filter` (`bbox`, `exclude_agencies`). The import cuts
   the feed to the city's area. See [docs/architecture.md](docs/architecture.md).
 - `line_group_rules` (internal, not returned by the API) sets the line groups of the timetable browser.
@@ -263,7 +265,8 @@ not secrets.
 - OTP graphs are rebuilt by hand. A graph built before the rail feed was added has no national rail
   until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
   realtime updates.
-- Attributions required by the data licences are not shown in the app yet (#25).
+- Data sources page (#25, #29): it shows the licence name and link, not the full licence text.
+  `docs/data-sources.md` is still planned.
 
 ## Repository layout
 
