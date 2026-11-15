@@ -50,7 +50,7 @@ Content-Language: en
 | Cities | `GET /cities/`, `GET /cities/{city}/` |
 | Stops search (implemented, #59) | `GET /cities/{city}/stops/?q=` |
 | Stops near a point (planned) | `GET /cities/{city}/stops/?lat=&lon=&radius=` |
-| Stop overview | `GET /cities/{city}/stops/{stop_id}/` (lines at the stop, next departures) |
+| Stop overview (#9) | `GET /cities/{city}/stops/{stop_id}/` (lines at the stop with directions) |
 | Departures (#73) | `GET /cities/{city}/stops/{stop_id}/departures/?limit=` (scheduled + live) |
 | Lines (implemented, #10) | `GET /cities/{city}/lines/?vehicle_type=tram\|bus\|metro\|rail` |
 | Line diagram (implemented, #10) | `GET /cities/{city}/lines/{line_id}/route/?direction=0\|1` |
@@ -409,6 +409,47 @@ No auth. Timetable shared rules (ids, line summary, errors) apply.
   or stop `code`, `null` when neither is set.
 - An empty `departures` list is a valid answer (`200`), e.g. at night.
 - Response header `Cache-Control: max-age=15`.
+- Errors: unknown city or stop → `404 not_found`.
+
+## Stop overview (#9)
+
+### `GET /api/v1/cities/{city}/stops/{stop_id}/` (#9)
+Lines serving a stop group, with their directions, so the client can link each one to the stop timetable (#10).
+No auth. Active static GTFS feeds of the city only. Timetable shared rules (ids, line summary, errors) apply.
+Next departures are not part of this response; clients call `…/stops/{stop_id}/departures/` (#73).
+- `stop_id`: any platform id. The response covers its whole stop group, using the same grouping as stop search
+  (platforms with the same name within 300 m).
+```json
+{
+  "stop": { "id": "ztp_tram:stop_376_47501", "name": "Bagatela", "lat": 50.0606, "lon": 19.9330,
+            "vehicle_types": ["tram", "bus"],
+            "stop_ids": ["ztp_tram:stop_376_47501", "ztp_bus:stop_376_47502"] },
+  "lines": [
+    { "line": { "id": "ztp_tram:52", "short_name": "52", "vehicle_type": "tram", "group": "day",
+                "colour": "#1f6feb", "text_colour": "#ffffff" },
+      "directions": [
+        { "direction": 0, "headsign": "Czerwone Maki P+R", "platform_id": "ztp_tram:stop_376_47501" },
+        { "direction": 1, "headsign": "Os. Piastów", "platform_id": "ztp_tram:stop_376_47503" }
+      ] }
+  ]
+}
+```
+- `stop`: `id` echoes the requested `stop_id`; `name` is the group name; `lat` / `lon` the group centroid;
+  `vehicle_types` and `stop_ids` as in stop search.
+- `lines`: every line with at least one trip (in any active service) calling at a platform of the group.
+  Sorted by vehicle type (`tram`, `bus`, `metro`, `rail`), then by the order of the city's `line_groups`, then by
+  `short_name` in natural order (`2` before `10`, then letters).
+- `directions`: one entry per `direction_id` (missing = `0`) in which the line **departs** from the group, sorted by
+  `direction`. A trip departs from the group when it calls at one of its platforms with a later stop after it and
+  boarding allowed there (`pickup_type` is not `1`), as in the departures and stop timetable endpoints. A direction
+  with no such trip (e.g. the group is only the last stop) is omitted; a line left with no directions is omitted.
+  - `platform_id`: the platform of the group where most trips of that line and direction call (ties: lowest id).
+    Together with `line.id` and `direction` it is valid input for
+    `GET /cities/{city}/lines/{line_id}/stops/{platform_id}/timetable/?direction=`.
+  - `headsign`: the most frequent headsign of those trips at that platform (stop headsign, then trip headsign,
+    then the last stop name; ties: alphabetical). It is an empty string only if all three are blank.
+- An empty `lines` list is valid (`200`).
+- Response header `Cache-Control: max-age=300`.
 - Errors: unknown city or stop → `404 not_found`.
 
 ## Assistant (#18)
