@@ -69,6 +69,111 @@
     "message": "The page you are looking for does not exist or has been moved.",
     "backHome": "Back to the home page"
   },
+  "common": {
+    "loading": "Loading…"
+  },
+  "errors": {
+    "notFound": "Not found.",
+    "network": "Cannot reach the server. Check your connection and try again.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "generic": "Something went wrong. Please try again.",
+    "retry": "Try again"
+  },
+  "timetable": {
+    "title": "Timetables",
+    "lineDiagram": "Line route",
+    "stopTimetable": "Stop timetable",
+    "vehicleTypesLabel": "Vehicle type",
+    "vehicleTypes": {
+      "tram": "Trams",
+      "bus": "Buses",
+      "metro": "Metro",
+      "rail": "Trains"
+    },
+    "vehicleType": {
+      "tram": "Tram",
+      "bus": "Bus",
+      "metro": "Metro",
+      "rail": "Train"
+    },
+    "noVehicleTypes": "There are no timetables for this city yet.",
+    "loadingLines": "Loading lines…",
+    "searchLabel": "Search lines",
+    "searchPlaceholder": "Line number or route name",
+    "searchResults": "Lines found: {count}",
+    "noLines": "No lines of this type.",
+    "noSearchResults": "No lines match “{query}”.",
+    "lineLabel": "Line {line}",
+    "lineTileLabel": "Line {line}, {name}",
+    "notice": {
+      "detour": "Detour",
+      "change": "Timetable change"
+    },
+    "breadcrumbs": "Timetable navigation",
+    "backToLines": "All lines",
+    "lineNotFound": "This line was not found in the selected city.",
+    "stopNotFound": "This line does not stop here in this direction.",
+    "loadingRoute": "Loading route…",
+    "loadingTimetable": "Loading timetable…",
+    "direction": "Direction",
+    "date": "Date",
+    "today": "Today",
+    "noServiceShifted": "The line does not run on {requested}. Showing the route of the next day with service: {shown}.",
+    "variantsTitle": "Route variants ({count})",
+    "tripCount": "trips: {count}",
+    "variantKinds": {
+      "main": "main route",
+      "short_turn": "short turn",
+      "depot": "depot run",
+      "other": "other variant"
+    },
+    "variantStartsHere": "starts here: {kind} → {headsign}",
+    "variantEndsHere": "ends here: {kind} → {headsign}",
+    "noStops": "No stops for this direction.",
+    "stopsHeading": "Stops",
+    "pickStopHint": "Choose a stop to see its timetable.",
+    "routeMapLabel": "Route map of line {line} towards {headsign}",
+    "wheelchairBoarding": "Wheelchair accessible stop",
+    "variantOnlyStop": "some trips only",
+    "transfers": "Transfers",
+    "oppositeDirection": "Opposite direction",
+    "switchingDirection": "Finding the stop…",
+    "oppositeNotServed": "This stop is not served in the opposite direction. Choose a stop on the route.",
+    "noOppositeDirection": "This line has no opposite direction.",
+    "oppositeUnavailable": "Could not load the opposite direction. Please try again.",
+    "print": "Print / PDF",
+    "neighbourStops": "Neighbouring stops",
+    "previousStop": "Previous stop",
+    "nextStop": "Next stop",
+    "dayTypes": {
+      "weekday": "Weekdays",
+      "saturday": "Saturdays",
+      "sunday": "Sundays & holidays"
+    },
+    "lowFloorVehicle": "low-floor vehicle",
+    "hour": "Hour",
+    "selectedDayType": "selected date",
+    "noService": "no service",
+    "noDepartures": "No departures in the next 14 days.",
+    "nextDeparture": "Next departure",
+    "tableCaption": "Timetable of line {line} at {stop} towards {headsign}",
+    "departureLabel": "{time} → {headsign}",
+    "legend": {
+      "title": "Legend",
+      "lowFloor": "underlined – low-floor vehicle",
+      "variant": "{kind} → {headsign}",
+      "next": "next departure",
+      "past": "departed",
+      "selectedColumn": "column for the selected date",
+      "clickHint": "Click a minute to see the whole trip."
+    },
+    "trip": {
+      "title": "Trip",
+      "close": "Close",
+      "notFound": "This trip does not run on the selected day.",
+      "accessible": "wheelchair accessible vehicle"
+    }
+  },
   "units": {
     "duration": {
       "lessThanMinute": "< 1 min",

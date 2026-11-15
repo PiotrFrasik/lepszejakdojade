@@ -69,6 +69,111 @@
     "message": "Strona, której szukasz, nie istnieje lub została przeniesiona.",
     "backHome": "Wróć na stronę główną"
   },
+  "common": {
+    "loading": "Ładowanie…"
+  },
+  "errors": {
+    "notFound": "Nie znaleziono.",
+    "network": "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.",
+    "rateLimited": "Zbyt wiele zapytań. Odczekaj chwilę i spróbuj ponownie.",
+    "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+    "retry": "Spróbuj ponownie"
+  },
+  "timetable": {
+    "title": "Rozkłady jazdy",
+    "lineDiagram": "Trasa linii",
+    "stopTimetable": "Rozkład na przystanku",
+    "vehicleTypesLabel": "Rodzaj pojazdu",
+    "vehicleTypes": {
+      "tram": "Tramwaje",
+      "bus": "Autobusy",
+      "metro": "Metro",
+      "rail": "Pociągi"
+    },
+    "vehicleType": {
+      "tram": "Tramwaj",
+      "bus": "Autobus",
+      "metro": "Metro",
+      "rail": "Pociąg"
+    },
+    "noVehicleTypes": "W tym mieście nie ma jeszcze rozkładów jazdy.",
+    "loadingLines": "Ładowanie linii…",
+    "searchLabel": "Szukaj linii",
+    "searchPlaceholder": "Numer linii lub nazwa trasy",
+    "searchResults": "Znalezione linie: {count}",
+    "noLines": "Brak linii tego rodzaju.",
+    "noSearchResults": "Brak linii pasujących do „{query}”.",
+    "lineLabel": "Linia {line}",
+    "lineTileLabel": "Linia {line}, {name}",
+    "notice": {
+      "detour": "Objazd",
+      "change": "Zmiana rozkładu"
+    },
+    "breadcrumbs": "Nawigacja w rozkładach",
+    "backToLines": "Wszystkie linie",
+    "lineNotFound": "Nie znaleziono tej linii w wybranym mieście.",
+    "stopNotFound": "Ta linia nie zatrzymuje się na tym przystanku w tym kierunku.",
+    "loadingRoute": "Ładowanie trasy…",
+    "loadingTimetable": "Ładowanie rozkładu…",
+    "direction": "Kierunek",
+    "date": "Data",
+    "today": "Dziś",
+    "noServiceShifted": "W dniu {requested} linia nie kursuje. Pokazujemy trasę z najbliższego dnia z kursami: {shown}.",
+    "variantsTitle": "Warianty trasy ({count})",
+    "tripCount": "kursy: {count}",
+    "variantKinds": {
+      "main": "trasa podstawowa",
+      "short_turn": "kurs skrócony",
+      "depot": "zjazd lub wyjazd z zajezdni",
+      "other": "inny wariant"
+    },
+    "variantStartsHere": "tu zaczyna się: {kind} → {headsign}",
+    "variantEndsHere": "tu kończy się: {kind} → {headsign}",
+    "noStops": "Brak przystanków dla tego kierunku.",
+    "stopsHeading": "Przystanki",
+    "pickStopHint": "Wybierz przystanek, aby zobaczyć rozkład jazdy.",
+    "routeMapLabel": "Mapa trasy linii {line} w kierunku {headsign}",
+    "wheelchairBoarding": "Przystanek dostępny dla wózków",
+    "variantOnlyStop": "tylko niektóre kursy",
+    "transfers": "Przesiadki",
+    "oppositeDirection": "Przeciwny kierunek",
+    "switchingDirection": "Szukam przystanku…",
+    "oppositeNotServed": "Ten przystanek nie jest obsługiwany w przeciwnym kierunku. Wybierz przystanek na trasie.",
+    "noOppositeDirection": "Ta linia nie ma przeciwnego kierunku.",
+    "oppositeUnavailable": "Nie udało się wczytać przeciwnego kierunku. Spróbuj ponownie.",
+    "print": "Drukuj / PDF",
+    "neighbourStops": "Sąsiednie przystanki",
+    "previousStop": "Poprzedni przystanek",
+    "nextStop": "Następny przystanek",
+    "dayTypes": {
+      "weekday": "Dni robocze",
+      "saturday": "Soboty",
+      "sunday": "Niedziele i święta"
+    },
+    "lowFloorVehicle": "pojazd niskopodłogowy",
+    "hour": "Godz.",
+    "selectedDayType": "wybrana data",
+    "noService": "brak kursów",
+    "noDepartures": "Brak odjazdów w najbliższych 14 dniach.",
+    "nextDeparture": "Najbliższy odjazd",
+    "tableCaption": "Rozkład jazdy linii {line} na przystanku {stop} w kierunku {headsign}",
+    "departureLabel": "{time} → {headsign}",
+    "legend": {
+      "title": "Legenda",
+      "lowFloor": "podkreślenie – pojazd niskopodłogowy",
+      "variant": "{kind} → {headsign}",
+      "next": "najbliższy odjazd",
+      "past": "odjechał",
+      "selectedColumn": "kolumna dla wybranej daty",
+      "clickHint": "Kliknij minutę, aby zobaczyć cały kurs."
+    },
+    "trip": {
+      "title": "Kurs",
+      "close": "Zamknij",
+      "notFound": "Ten kurs nie jest realizowany w wybranym dniu.",
+      "accessible": "pojazd przystosowany dla wózków"
+    }
+  },
   "units": {
     "duration": {
       "lessThanMinute": "< 1 min",
