@@ -6,6 +6,8 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from django.db.models import Q
+
 from cities.registry import City, LineGroup
 from transit_data.models import FeedVersion, Route, Stop, Trip, vehicle_type_for_route_type
 
@@ -120,6 +122,15 @@ class Line:
         return {**self.summary(), "long_name": self.long_name, "notice": None}
 
 
+def line_colours(color: str | None, text_color: str | None, group: LineGroup) -> tuple[str, str]:
+    """``(colour, text_colour)`` of a line from GTFS ``route_color`` / ``route_text_color``
+    (hex without ``#``, any case), falling back to the line group colour."""
+    if color and color.upper() not in _UNSET_ROUTE_COLOURS:
+        colour = f"#{color.lower()}"
+        return colour, (f"#{text_color.lower()}" if text_color else readable_text_colour(colour))
+    return group.colour, readable_text_colour(group.colour)
+
+
 def _line_from_row(city: City, feeds: Feeds, row: dict) -> Line | None:
     """A Line from Route values, or None for vehicle types the city does not show."""
     vehicle_type = str(vehicle_type_for_route_type(row["route_type"]))
@@ -128,14 +139,7 @@ def _line_from_row(city: City, feeds: Feeds, row: dict) -> Line | None:
     feed_id = feeds.feed_by_version[row["feed_version_id"]]
     short_name = row["short_name"] or row["long_name"] or row["gtfs_id"]
     group = city.line_group_for(vehicle_type, feed_id, short_name)
-    if row["color"] and row["color"].upper() not in _UNSET_ROUTE_COLOURS:
-        colour = f"#{row['color'].lower()}"
-        text_colour = (
-            f"#{row['text_color'].lower()}" if row["text_color"] else readable_text_colour(colour)
-        )
-    else:
-        colour = group.colour
-        text_colour = readable_text_colour(colour)
+    colour, text_colour = line_colours(row["color"], row["text_color"], group)
     return Line(
         pk=row["id"],
         feed_version_id=row["feed_version_id"],
@@ -170,6 +174,22 @@ def lines_by_pk(city: City, feeds: Feeds, pks: Iterable[int]) -> dict[int, Line]
         *_ROUTE_FIELDS
     )
     return {line.pk: line for line in _lines(city, feeds, rows)}
+
+
+def lines_by_id(city: City, feeds: Feeds, line_ids: Iterable[str]) -> dict[str, Line]:
+    """Lines by public id; unknown or malformed ids are left out."""
+    gtfs_ids_by_version: dict[int, set[str]] = {}
+    for line_id in set(line_ids):
+        resolved = feeds.resolve(line_id)
+        if resolved is not None:
+            gtfs_ids_by_version.setdefault(resolved[0], set()).add(resolved[2])
+    if not gtfs_ids_by_version:
+        return {}
+    condition = Q()
+    for version_id, gtfs_ids in gtfs_ids_by_version.items():
+        condition |= Q(feed_version_id=version_id, gtfs_id__in=gtfs_ids)
+    rows = Route.objects.filter(condition).values(*_ROUTE_FIELDS)
+    return {line.id: line for line in _lines(city, feeds, rows)}
 
 
 def get_line(city: City, feeds: Feeds, line_id: str) -> Line | None:
