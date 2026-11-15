@@ -66,7 +66,7 @@ Content-Language: en
 | Favourites 🔒 | `GET/POST/DELETE /my/favourites/` |
 | History 🔒 | `GET/DELETE /my/history/` |
 | Chat | `POST /assistant/chat/` (body includes `language`: `pl` or `en`) |
-| Data sources | `GET /data-sources/` |
+| Data sources (#25) | `GET /data-sources/` |
 | Health | `GET /health/` |
 
 ## Endpoint details
@@ -366,3 +366,55 @@ Response `200 OK`:
   OTP finds no such route or it would take more than 3 hours.
 - Errors: unknown city → `404`; city without OTP configured or OTP unreachable / timing out (10 s) / returning an error
   → `503` with code `journey_planner_unavailable` (message translated). OTP internals are never passed to the client.
+
+## Data sources (#25)
+
+### `GET /api/v1/data-sources/` (#25)
+Licence attributions and the age of the static data, for the "Data sources" page (#29). No auth, not paginated.
+Translated fields come back in the request language (`Accept-Language`); proper names, licence names and URLs are not translated.
+
+Response `200 OK`:
+```json
+{
+  "cities": [
+    {
+      "id": "krakow",
+      "name": "Kraków",
+      "sources": [
+        {
+          "name": "Zarząd Transportu Publicznego w Krakowie",
+          "url": "https://gtfs.ztp.krakow.pl/",
+          "licence": "CC BY 4.0",
+          "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+          "description": "Rozkłady jazdy tramwajów i autobusów w Krakowie (także linii aglomeracyjnych Mobilis) oraz dane o pojazdach w czasie rzeczywistym."
+        }
+      ],
+      "feeds": [
+        {
+          "feed_id": "ztp_tram",
+          "publisher_name": "ZTP Kraków",
+          "last_modified": "2026-11-13T22:10:00+01:00",
+          "downloaded_at": "2026-11-14T03:00:12+01:00",
+          "imported_at": "2026-11-14T03:02:40+01:00",
+          "service_start_date": "2026-11-14",
+          "service_end_date": "2026-12-31"
+        }
+      ]
+    }
+  ]
+}
+```
+- `cities`: every configured city, ordered by `id` as in `GET /cities/`; `name` in the request language.
+- `sources`: the city's `attributions` from city config, in config order. `licence` (config allows null),
+  `licence_url` and `description` are nullable. `description` comes from an optional `descriptions: { pl, en }`
+  entry per attribution in city config (request language, falls back to `pl`, else `null`).
+- `feeds`: one entry per **active** static GTFS feed version of the city, ordered by `feed_id`. Empty list when nothing
+  has been imported yet (still `200`). It states when the data was created (`last_modified`, the publisher's HTTP
+  `Last-Modified` converted to ISO 8601; `null` when absent or unparsable) and retrieved (`downloaded_at`), as several
+  licences require. `publisher_name` is from `feed_info.txt` (`null` when empty); `imported_at`,
+  `service_start_date`, `service_end_date` are nullable.
+- Timestamps ISO 8601 with offset in the city timezone; dates `YYYY-MM-DD`.
+- Not exposed: feed source URLs, hashes, etags, sizes, or any other internal config (feeds, OTP).
+- The statement that the data was processed (required by PKP PLK, Koleje Mazowieckie and Warsaw open data terms)
+  is static UI text on the page (frontend i18n), not part of the response.
+- Errors: none specific to this endpoint.
