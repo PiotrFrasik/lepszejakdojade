@@ -1,8 +1,8 @@
 # City configuration: Warsaw.
 # Schema and validation: backend/cities/registry.py. The file name must equal `id`.
 # Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
-# Internal only (never returned by the API): line_group_rules, feeds, ticket_zones, attributions,
-# otp.
+# Exposed only by GET /data-sources/: attributions (name, url, licence, licence_url, descriptions).
+# Internal only (never returned by the API): line_group_rules, feeds, ticket_zones, otp.
 # Feed URLs and licences were checked against the publishers on the date in each comment.
 # A null URL is deliberate; the comment next to it gives the reason.
 
@@ -117,45 +117,69 @@ attributions:
     url: https://www.ztm.waw.pl/
     licence: ZTM Warszawa timetable data terms of use
     licence_url: https://www.ztm.waw.pl/pliki-do-pobrania/dane-rozkladowe/
+    descriptions:
+      pl: Rozkłady jazdy autobusów, tramwajów, metra i SKM w Warszawie.
+      en: Timetables of buses, trams, metro and SKM trains in Warsaw.
   # checked 2026-11-14: reuse requires stating the source, when the data was created and
   # retrieved, and that the data was processed (to be shown on the data sources page, #25).
   - name: Miasto Stołeczne Warszawa – otwarte dane
     url: https://api.um.warszawa.pl/
     licence: Warsaw Open Data terms of reuse
     licence_url: https://api.um.warszawa.pl/index.php?wcag=true&opc=5,1,0,0,
+    descriptions:
+      pl: Położenie autobusów i tramwajów w czasie rzeczywistym.
+      en: Real-time positions of buses and trams.
   # checked 2026-11-14: mkuran.pl asks to expose all attributions listed in the feed's
   # attributions.txt, not only this entry.
   - name: Mikołaj Kuranowski – Warsaw GTFS
     url: https://mkuran.pl/gtfs/
     licence: Provided as is; carries ZTM terms; bus shapes ODbL
     licence_url: https://mkuran.pl/gtfs/
+    descriptions:
+      pl: Rozkłady komunikacji miejskiej w Warszawie w formacie GTFS, opracowane na podstawie danych ZTM.
+      en: Warsaw public transport timetables in GTFS format, built from ZTM data.
   # checked 2026-11-14
   - name: Warszawska Kolej Dojazdowa (GTFS by mkuran.pl)
     url: https://mkuran.pl/gtfs/
     licence: CC0 1.0
     licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    descriptions:
+      pl: Rozkłady jazdy pociągów Warszawskiej Kolei Dojazdowej w formacie GTFS.
+      en: Warszawska Kolej Dojazdowa train timetables in GTFS format.
   # checked 2026-11-14: reuse requires stating the source, when the data was created and
   # retrieved, that it was processed, and informing PKP PLK about the processing.
   - name: PKP Polskie Linie Kolejowe S.A.
     url: https://www.plk-sa.pl/klienci-i-kontrahenci/api-otwarte-dane
     licence: PKP PLK public sector information reuse terms
     licence_url: https://bip.plk-sa.pl/ponowne-wykorzystywanie
+    descriptions:
+      pl: Rozkłady jazdy pociągów na sieci kolejowej zarządzanej przez PKP PLK.
+      en: Train timetables on the railway network managed by PKP PLK.
   # checked 2026-11-14: mkuran.pl asks to expose all attributions in the feed's attributions.txt
   # (Mikołaj Kuranowski, PKP PLK, Koleje Mazowieckie).
   - name: Mikołaj Kuranowski – Polish Trains GTFS
     url: https://mkuran.pl/gtfs/
     licence: Provided as is; carries PKP PLK and Koleje Mazowieckie terms
     licence_url: https://mkuran.pl/gtfs/
+    descriptions:
+      pl: Rozkłady pociągów regionalnych i dalekobieżnych w formacie GTFS, opracowane na podstawie danych PKP PLK i Kolei Mazowieckich.
+      en: Regional and long-distance train timetables in GTFS format, built from PKP PLK and Koleje Mazowieckie data.
   # checked 2026-11-14: source, creation/retrieval time and processing must be stated.
   - name: Koleje Mazowieckie – KM sp. z o.o.
     url: https://mazowieckie.com.pl/
     licence: Koleje Mazowieckie public sector information reuse terms
     licence_url: https://bip.mazowieckie.com.pl/pl/ponowne-wykorzystywanie-informacji-sektora-publicznego
+    descriptions:
+      pl: Rozkłady jazdy pociągów Kolei Mazowieckich.
+      en: Koleje Mazowieckie train timetables.
   # Street and map data (e.g. the OpenTripPlanner street graph).
   - name: OpenStreetMap contributors
     url: https://www.openstreetmap.org/copyright
     licence: ODbL 1.0
     licence_url: https://opendatacommons.org/licenses/odbl/1-0/
+    descriptions:
+      pl: Dane o ulicach i ścieżkach używane do wyznaczania dojść pieszych i tras rowerowych.
+      en: Street and path data used for walking and cycling routes.
 
 # OpenTripPlanner graph build. Optional `bbox: [min_lon, min_lat, max_lon, max_lat]` overrides
 # the clip area, which by default is derived from the GTFS stops.

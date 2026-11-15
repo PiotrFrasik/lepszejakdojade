@@ -9,6 +9,10 @@ Entries are written from Conventional Commit messages.
 
 ### Added
 
+- Data sources (#25, #29): `GET /api/v1/data-sources/` returns each city's licence attributions and the
+  age of its active static feeds (created, retrieved, imported, service dates). Attributions take optional
+  `descriptions` (pl and en) in the city config. A Data sources page shows them per city, with a notice
+  that the data was processed.
 - AI chat assistant (#18, #19): `POST /api/v1/assistant/chat/` in the new `assistant` app and a chat panel on every
   page with a `/assistant` page. Gemini sits behind a provider interface (REST over `urllib`, no SDK); the model is
   set by `GEMINI_MODEL` (default `gemini-flash-latest`) and the key by `GEMINI_API_KEY`. Six read-only tools use the

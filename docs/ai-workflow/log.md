@@ -20,6 +20,34 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Data sources — 2026-11-15
+**Issues / PRs:** #25, #29 (PRs: pending)
+**Branches:** feat/25-data-sources-endpoint, feat/29-data-sources-page; integration worktree `integration/data-sources` for the manual test
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Picked data sources in the agreed MVP order (after the AI chat). Wrote the contract in `docs/api.md` first (uncommitted) and passed it to the agents as a file in the scratchpad, because worktrees do not see uncommitted files. Added data freshness (`last_modified` = created, `downloaded_at` = retrieved), because PKP PLK, Koleje Mazowieckie and Warsaw open data terms require stating when data was created and retrieved, and that it was processed. The "processed" statement is static i18n text. | Done. |
+| backend (#25) | `GET /api/v1/data-sources/` in the `cities` app. Optional `descriptions: {pl, en}` per attribution in city config (validated, both languages required). Descriptions added to all 13 attributions. HTTP `Last-Modified` parsed to ISO 8601 (`null` if unparsable). Timestamps in the city timezone. One query. Only active feed versions of feeds still in config. No internal fields. No new translations or migrations. | Done. |
+| frontend (#29) | `DataSourcesView` replaces the placeholder. Processed-data notice. Per-city sections, current city first, with sources and data freshness. Locale-formatted dates. Loading, error with retry, and empty states. Re-fetch on language change. Accessible headings and external links. Phone layout. pl and en keys. | Done. |
+| tester (#25) | Backend `test_data_sources.py`, 52 cases. Full backend suite 1257 passed. | Passing. |
+| tester (#29) | Frontend `dataSourcesView.test.ts`, 18 tests. Full Vitest 347 passed. Type-check and lint clean. | Passing. |
+| reviewer (#25) | Rounds: 1. | APPROVED, no blocking findings. |
+| reviewer (#29) | Rounds: 1. | APPROVED, no blocking findings. |
+
+**Review findings that mattered:**
+- Frontend, should-fix, deferred: feed dates are formatted in the selected city's timezone, not the feed's city. Both cities share one zone today.
+- Nits, deferred: ZTP description wording ("real-time vehicle data" could name positions, delays and alerts); move `parse_http_date` to core utils; tighten the query count test to 1; merge the duplicate licence link markup; use `section` or `role="note"` instead of `aside` for the notice.
+
+**Manual test (maintainer):** OK, approved on the `integration/data-sources` worktree.
+
+**Problems and lessons:**
+- No new problems. Passing the uncommitted contract as a scratchpad file worked.
+- Each agent finished in one round. No fix rounds were needed.
+
+**Follow-ups:**
+- The deferred should-fix and nits above.
+- PKP PLK must be told about the processing. This is done by the maintainer, outside the app.
+
 ## AI chat assistant — 2026-11-15
 **Issues / PRs:** #18, #19 (PRs: pending)
 **Branches:** feat/18-assistant-chat, feat/19-chat-window; integration worktree `integration/assistant` for the manual test
