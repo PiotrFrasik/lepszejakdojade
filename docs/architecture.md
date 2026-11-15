@@ -34,8 +34,8 @@ flowchart LR
     redis --> cw
     cw --> db
     cw -- "HTTP GET, protobuf" --> ztp
-    be -. "get_otp_url(city), planned #12" .-> okr
-    be -. "get_otp_url(city), planned #12" .-> owa
+    be -- "journeys: GraphQL POST /otp/gtfs/v1 (#12)" --> okr
+    be -- "journeys: GraphQL POST /otp/gtfs/v1 (#12)" --> owa
     be -.-> gemini
     cw -- "HTTP GET, zip (conditional)" --> gtfs
     gtfs -- "HTTP GET, zip (conditional)" --> be
@@ -49,11 +49,11 @@ flowchart LR
 | Service | Where | Notes |
 |---|---|---|
 | Frontend | `frontend/` | Vue 3, TypeScript, Vite, Pinia, vue-i18n, MapLibre |
-| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable` |
+| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable`, `journeys` |
 | celery-worker, celery-beat | `backend/` image | Same image as the backend; runs background tasks |
 | Redis | `redis:7-alpine` | Celery broker |
 | PostgreSQL | `postgis/postgis:16-3.4` | Main database |
-| OpenTripPlanner | `opentripplanner/opentripplanner:2.6.0` | One instance per city: `otp-krakow` and `otp-warszawa`, profile `otp`, bound to 127.0.0.1 on ports 8080 and 8081. Graphs are built by one-shot services (profile `otp-build`). Journey search is planned (#12) |
+| OpenTripPlanner | `opentripplanner/opentripplanner:2.6.0` | One instance per city: `otp-krakow` and `otp-warszawa`, profile `otp`, bound to 127.0.0.1 on ports 8080 and 8081. Graphs are built by one-shot services (profile `otp-build`). Journey search calls it through GraphQL (#12) |
 | OSM extracts | Geofabrik, external | Regional extracts for Małopolska and Mazowsze. `prepare_otp_inputs` clips them with `osmium-tool`, which is installed in the backend image (#8) |
 | Gemini | external | Planned (#18). Behind a provider interface |
 | ZTP Kraków feeds | external | Read by the realtime collector |
@@ -270,7 +270,7 @@ Rules the steps follow:
 - **Mounts.** The backend mounts `./otp` at `/otp` read-write. The celery worker and beat mount it
   read-only.
 - **Backend access.** `cities.registry.get_otp_url(city)` returns the URL from `OTP_URL_KRAKOW` or
-  `OTP_URL_WARSZAWA`. No backend code calls OTP yet; the journeys endpoint is #12.
+  `OTP_URL_WARSZAWA`. Only the `journeys` app calls OTP, through that URL (#12).
 
 Measured on 2026-11-14 (Docker with 12 GB, 8 CPUs, OTP 2.6):
 
@@ -299,11 +299,72 @@ Build and run commands are in the [README](../README.md#opentripplanner-graphs).
 The rules for the input files, failure cases and the lock file are in
 [`otp/README.md`](../otp/README.md).
 
-### Journey search (planned, #12)
+### Journey search (implemented, #12, #13)
 
-Frontend sends `A → B` with time and preferences to the backend. The backend calls the OTP
-instance of the city and returns journeys. The app has no routing code of its own; the engine is
-OpenTripPlanner 2 ([concept](concept.md), section 1).
+The frontend sends `A → B` with time and preferences to the backend. The `journeys` Django app calls the
+OTP instance of the city and returns up to 5 itineraries. The app has no routing code of its own; the engine
+is OpenTripPlanner 2 ([concept](concept.md), section 1). Contract: [api.md](api.md#journeys-12-and-stop-search-59).
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (home map, journey panel)
+    participant B as Backend (journeys app)
+    participant O as OTP 2 (/otp/gtfs/v1)
+
+    U->>F: enter A and B (stop autocomplete, map pick, my location)
+    F->>B: GET /cities/{city}/stops/?q= (250 ms debounce)
+    B-->>F: stops (stop search, see below)
+    F->>B: POST /cities/{city}/journeys/search/
+    B->>B: resolve stop_id to coordinates, check city bbox
+    par transit
+        B->>O: planConnection, city vehicle_types
+    and walk
+        B->>O: planConnection, walk only
+    and bike
+        B->>O: planConnection, bike only
+    end
+    O-->>B: itineraries, polylines (any failure: 503)
+    B->>B: decode polylines, reuse timetable line summary
+    B-->>F: itineraries, legs, geometry, comparison
+    F-->>U: result list, route on map, walk and bike comparison
+```
+
+Rules the app follows:
+
+- **OTP client.** `journeys/otp.py` uses Python's `urllib` (no GraphQL library) to POST to
+  `OTP_URL_<CITY>/otp/gtfs/v1`. The timeout is `OTP_TIMEOUT_SECONDS` (10 s). Any failure returns `503`
+  `journey_planner_unavailable`; OTP's errors are never sent to the client.
+- **Parallel queries.** `services.py` runs the transit, walk and bike `planConnection` queries in parallel.
+  The walk and bike results make up `comparison`. It is `null` when OTP finds no route or the route takes more
+  than `JOURNEY_COMPARISON_MAX_DURATION` (3 h).
+- **Modes** are limited to the city's `vehicle_types`.
+- **Bounding box.** Points outside the city's box are rejected with `400`. The box is the city's `otp.bbox`, or
+  the extent of the stops plus a buffer.
+- **Preferences.** `fewer_transfers` sets `JOURNEY_FEWER_TRANSFERS_COST` (900). `less_walking` sets the walk
+  reluctance to `JOURNEY_LESS_WALKING_RELUCTANCE` (5.0). `wheelchair` prefers accessible trips and stops; it
+  does not exclude the others (the OTP router config sets `onlyConsiderAccessible` to false). See
+  [decision 30](decisions.md#30-wheelchair-is-a-preference-not-a-filter).
+- **Geometry.** OTP's polylines are decoded in `polyline.py` to GeoJSON `[lon, lat]` coordinates.
+- **Line summary.** Each transit leg reuses the timetable line summary, so its ids link to the timetable.
+- **Frontend** (#13). The home route `/` is a full-screen map with a floating panel on desktop, and a top panel
+  with a bottom tab bar on phones. `/journey` redirects to `/`. The tab bar also lists Tickets and Assistant,
+  which are planned. The Pinia store keeps the search across navigation. Times use the city's timezone offset.
+  Errors are shown for `503`, `429`, network failures and `400`.
+- **Not in the MVP.** Address geocoding: from and to are stops, map points or my location
+  ([decision 31](decisions.md#31-no-address-geocoding-in-the-mvp)).
+
+### Stop search (implemented, #59)
+
+`GET /api/v1/cities/{city}/stops/?q=` is in `backend/timetable/stops.py`. It is used by the journey form.
+
+- **Matching is in memory.** Names are compared without diacritics (`ł` is folded to `l`), and word-prefix
+  matches rank first. No PostgreSQL extension is used.
+- **Grouping.** Platforms with the same name within 300 m are one result. At most 20 results.
+- **Cache.** The stop list is cached for 24 h, keyed by the active feed versions, so a new import starts a new
+  entry. Redis is not yet the Django cache backend (follow-up, devops).
+- **Data check.** On real Warsaw data, stop names carry no platform codes, so grouping by name works.
+- Decision: [decision 29](decisions.md#29-stop-search-is-in-memory-with-diacritics-folding).
 
 ### Timetable browser (implemented, #10, #11)
 
@@ -392,7 +453,7 @@ backend returns text or cards. Rate limits apply per user.
   [README](../README.md#opentripplanner-graphs)). The rebuild is not scheduled yet
   ([decision 17](decisions.md#17-graph-rebuild-is-manual-for-now)).
 - The `make` build target restarts the city's service if it is running. While it restarts, that
-  city's OTP does not answer.
+  city's OTP does not answer, and journey search for that city returns `503`.
 - Graphs built before the rail feed was added have no national rail. Rebuild each city to include it.
   Build time and memory with rail are not measured yet (#51).
 - Measured peak memory: Warsaw build 7.4 GB RSS, Kraków build 3.5 GB RSS. Docker was given 12 GB.
