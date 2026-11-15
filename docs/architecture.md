@@ -405,7 +405,7 @@ The city is not in the URL. Maps use MapLibre with its worker set explicitly (se
 [decisions](decisions.md#26-maplibre-worker-url-set-explicitly)).
 
 The stop page with the departures board is built (#73, see [Live departures](#live-departures-implemented-73-74)).
-Planned: the list of lines at a stop (#56).
+The lines at a stop are built too (#9, #56, see [Stop overview](#stop-overview-implemented-9-56)).
 
 ### Live departures (implemented, #73, #74)
 
@@ -457,6 +457,54 @@ Rules the endpoint and the board follow:
   `frequencies.txt` are not expanded. Warsaw has no realtime data. The central stop responds in 0.6 to 0.8 s.
 - **Follow-ups.** Index and performance tuning for the `StopEvent` lookup. The collector should keep
   whole-trip cancellations.
+
+### Stop overview (implemented, #9, #56)
+
+`GET /api/v1/cities/{city}/stops/{stop_id}/` is in `backend/timetable/overview.py`. The stop view at
+`/timetable/stops/:stopId` loads it next to the departures board. Contract: [api.md](api.md#stop-overview-9).
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (stop view)
+    participant B as Backend (timetable app)
+    participant P as PostgreSQL (GTFS tables)
+    participant C as Cache (24 h)
+
+    U->>F: open /timetable/stops/:stopId
+    par departures board (#73)
+        F->>B: GET .../stops/{stop_id}/departures/
+    and lines at this stop
+        F->>B: GET .../stops/{stop_id}/
+    end
+    B->>C: directions per route (city, feed versions, representative stop)
+    alt cache miss
+        B->>P: one aggregate (GROUPING SETS) over departing trips
+        P-->>B: trip counts per line, direction, platform and headsign
+        B->>C: store
+    end
+    B-->>F: lines with directions; colours and summaries from city config
+    F-->>U: "Lines at this stop" with links to the stop timetable
+```
+
+Rules the endpoint follows:
+
+- **Stop group.** The response covers the same stop group as stop search (`stops.group_of_platform`).
+- **Departing trip.** A trip counts at a stop when a later stop exists in the trip and its pickup type is not 1.
+  This matches the departures board and the stop timetable.
+- **Directions.** One SQL aggregate counts distinct departing trips per line, direction, platform and headsign.
+  Results are cached for 24 h per route. The key is the city, the active feed version ids and the group's
+  representative stop, so a new import starts a new entry.
+- **Config values.** Line summaries, groups and colours come from the city config on every request, so a config
+  change shows at once, even while directions are cached.
+- **Vehicle types.** `group_vehicle_types()` is shared with stop search.
+- **Frontend.** The two requests run in parallel and fail on their own. If both return 404, the page shows
+  "stop not found". Lines use `VehicleTypeTabs` and `LineBadge`, and each direction links to the stop timetable.
+- **Checked data.** Kraków only: Rondo Mogilskie has 14 platforms and 24 lines. A cold request takes about 1.7 s
+  and a warm one about 52 ms. Every returned platform and direction gives 200 from the stop timetable endpoint.
+  No Warsaw data was checked locally.
+- **Follow-ups.** Nearby search and colloquial aliases (#77). Tests for config changes while cached, and for an
+  unknown route suffix (see [decision 39](decisions.md#39-stop-overview-counts-directions-in-one-aggregate-with-a-24-h-cache)).
 
 ### Live vehicles (planned, #20, #21)
 

@@ -18,6 +18,8 @@ The app is bilingual (Polish / English) with a language switcher.
 - **Live departures board** (built, #73, #74): next departures of a stop group, with live times for Kraków
   when the realtime data is fresh. Otherwise the board shows the timetable. Routes are in
   [Live departures](#live-departures). API: [docs/api.md](docs/api.md#departures-73).
+- **Stop view** (built, #9, #56): the departures board and the lines serving the stop, with their directions.
+  Routes are in [Stop view](#stop-view). API: [docs/api.md](docs/api.md#stop-overview-9).
 - **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
   my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
   a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
@@ -27,7 +29,7 @@ The app is bilingual (Polish / English) with a language switcher.
   Polish or English for stops, journeys, departures, lines and timetables. Answers come only from app data
   through six read-only tools. Journeys, departures and stops are shown as cards. Details are in
   [AI chat assistant](#ai-chat-assistant).
-- **Planned:** live vehicles (#20, #21), lines at a stop (#56), delay statistics and predictions (#22, #23),
+- **Planned:** live vehicles (#20, #21), nearby stop search and colloquial stop names (#77), delay statistics and predictions (#22, #23),
   tickets (demo).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
@@ -216,7 +218,7 @@ Built on the active static GTFS versions (see [Static timetables](#static-timeta
 The departures board shows the next departures of a stop group in Kraków and, without live data, in Warsaw.
 No login.
 
-- Page: `/timetable/stops/:stopId`. Open it from stop search on `/timetable` or from a stop timetable.
+- Page: `/timetable/stops/:stopId`, the stop view. Open it from stop search on `/timetable` or from a stop timetable.
 - API (read-only): `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=`. Contract:
   [docs/api.md](docs/api.md#departures-73).
 - Backend: `backend/timetable/departures.py`. Frontend: `StopDeparturesView`, `DepartureRow`, `useStopDepartures`
@@ -226,6 +228,16 @@ No login.
 - Development only: `VITE_DEPARTURES_MOCK=true` replaces the API with a mock on the dev server. It is never in
   production builds.
 - Rules and the data flow are in [docs/architecture.md](docs/architecture.md#live-departures-implemented-73-74).
+
+## Stop view
+
+The stop view is the departures board at `/timetable/stops/:stopId` with a "Lines at this stop" list below it.
+Each line links to its timetable at this stop in each direction. No login.
+
+- API (read-only): `GET /api/v1/cities/{city}/stops/{stop_id}/`. Contract: [docs/api.md](docs/api.md#stop-overview-9).
+- Backend: `backend/timetable/overview.py`. Frontend: `StopLines.vue` and `useStopOverview.ts`.
+- The two requests load in parallel and fail on their own. If both return 404, the page shows "stop not found".
+- Rules and the data flow are in [docs/architecture.md](docs/architecture.md#stop-overview-implemented-9-56).
 
 ## Journey planning
 
@@ -307,8 +319,9 @@ not secrets.
   keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
   The national rail feed comes from the same source and has the same risk.
 - National rail has static timetables only. There is no realtime data for it yet.
-- Timetable browser: frequency-based trips show the template trip's times in the trip view. The list of
-  lines at a stop is planned (#56).
+- Timetable browser: frequency-based trips show the template trip's times in the trip view.
+- Stop view: a direction is listed when a trip departs the stop there (a later stop exists and the
+  pickup type is not "no pickup"). Stop search does not yet find stops by nearby location (#77).
 - Live departures: the collector drops whole-trip cancellations, so only skipped stops show as cancelled.
 - Live departures: trips from `frequencies.txt` are not expanded.
 - Live departures: Warsaw has no realtime data, so its board shows the timetable only.

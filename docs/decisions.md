@@ -704,3 +704,24 @@ matches.
 **Consequences.**
 - A new realtime feed needs a `static_feed` entry in its city config.
 - A feed without `static_feed` is allowed only while `realtime.departures` is off.
+
+## 39. Stop overview counts directions in one aggregate with a 24 h cache
+
+**Status:** accepted (2026-11-15, #9)
+
+**Context.** The stop view needs every line at a stop with its directions. Counting per line would mean one query
+per line, about 24 at Rondo Mogilskie. Line names and colours change with the city config, not with the feed.
+
+**Decision.** One SQL aggregate (`GROUPING SETS`) counts distinct departing trips per line, direction, platform and
+headsign. A trip departs when a later stop exists and its pickup type is not 1, as in the departures board and the
+stop timetable. The directions per route are cached for 24 h, keyed by city, active feed version ids and the group's
+representative stop. Line summaries, groups and colours are read from the city config on every request.
+
+**Alternatives.** Derive the lines from the departures board: rejected, it shows only the next departures, not all
+lines. One request per line from the frontend: rejected, more round trips. Cache the whole response: rejected, a
+config change would show late.
+
+**Consequences.**
+- A new import starts a new cache entry. Config changes show at once.
+- Kraków measured: about 1.7 s cold and 52 ms warm. Warsaw not measured locally.
+- Tests for config changes while cached and for unknown route suffixes are a follow-up.
