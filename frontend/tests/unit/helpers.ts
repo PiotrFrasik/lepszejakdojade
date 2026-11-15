@@ -20,7 +20,7 @@ export async function mountApp(
     ...options,
     global: {
       plugins: [pinia, i18n, router],
-      stubs: { CityMap: true },
+      stubs: { CityMap: true, JourneyMap: true },
       ...(options.global ?? {}),
     },
   })
