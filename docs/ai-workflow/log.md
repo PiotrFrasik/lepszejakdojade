@@ -20,6 +20,41 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Live departures board — 2026-11-15
+**Issues / PRs:** #73, #74 (PRs: pending)
+**Branches:** feat/73-stop-departures (backend), feat/74-departures-board (frontend)
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Cleaned up 14 stale worktrees and 28 merged local branches. Moved the Kraków OTP graph to `otp/data/krakow`. Found the compose stack running from an old integration worktree without celery (the collector was not collecting) and a database with no GTFS. Restarted from main and imported Kraków GTFS. Checked that realtime ids match static ids (100% of stops, 97% of trips) before the backend started. Wrote the contract in `docs/api.md` first. Created #73 and #74. | Done. |
+| backend (#73) | `GET /api/v1/cities/{city}/stops/{stop_id}/departures/` in `timetable/departures.py` (`StopDeparturesView`), using the stop grouping of stop search. `static_feed` in the city config. Smoke-tested on real data: 29 of 30 departures at Teatr Bagatela were live. | Done. |
+| frontend (#74) | Departures board at `/timetable/stops/:stopId`, entry points from stop search and the stop timetable, auto-refresh, timetable-only fallback, Polish plural rule in vue-i18n, dev-only mock (`VITE_DEPARTURES_MOCK`). | Done. |
+| tester (#74) | Frontend: 489 Vitest tests passing (about 59 new). | Passing. |
+| tester (#73) | Backend: 561 timetable and cities tests passing (52 new, plus a loop-trip test, a `static_feed` rule test and 6 DST cases). | Passing. |
+| reviewer (#74) | Rounds: 1. | APPROVED with a should-fix (a stale board still looked live). Fixed in one round. |
+| reviewer (#73) | Rounds: 1. | APPROVED with should-fixes (`static_feed` was not required when departures were on; a loop trip could match a wrong event). Fixed in one round, DST tests added. |
+
+**Review findings that mattered:**
+- Frontend: a board with old data still looked live. It now turns timetable-only after 5 min without a successful refresh, and departed rows are hidden.
+- Backend: `static_feed` was not required when `realtime.departures` was on. It is now validated at startup.
+- Backend: a loop trip could match an event with a different `stop_sequence`. An event with a different non-null sequence never matches.
+
+**Manual test (maintainer):** Approved without remarks.
+
+**Problems and lessons:**
+- A local Windows PostgreSQL service occupies port 5432. The compose database is published on 5433 (`DB_PORT=5433`).
+- The compose project name defaults to the folder name. Run from a worktree with `-p lepszejakdojade`, or compose creates empty volumes.
+- A deny rule blocks copying `.env` into a worktree. Compose uses `--env-file` pointing at the main checkout.
+- A tester ran `docker compose up` in parallel with the coordinator's restart. Only the coordinator should manage the stack.
+- Check that celery beat is running before relying on collected data.
+
+**Follow-ups:**
+- Assistant departures could use the new service for live times.
+- The collector should keep whole-trip cancellations (see the limitations in the README).
+- Move `PlaceInput` to shared components.
+- Index and performance tuning for the `StopEvent` lookup.
+- `VITE_DEPARTURES_MOCK` and a note on `DB_PORT` in `.env.example` (devops).
+
 ## Data sources — 2026-11-15
 **Issues / PRs:** #25, #29 (PRs: pending)
 **Branches:** feat/25-data-sources-endpoint, feat/29-data-sources-page; integration worktree `integration/data-sources` for the manual test
