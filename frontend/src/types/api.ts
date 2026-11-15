@@ -224,3 +224,112 @@ export interface Trip {
   wheelchair_accessible: boolean | null
   stops: TripStop[]
 }
+
+// ---------------------------------------------------------------------------
+// Stop search (#59) and journeys (#12)
+// ---------------------------------------------------------------------------
+
+/** Item of `GET /api/v1/cities/{city}/stops/?q=` (platforms grouped by name, at most 20). */
+export interface StopSearchResult {
+  /** Representative platform (closest to the group centroid). */
+  stop_id: StopId
+  name: string
+  /** Group centroid. */
+  lat: number
+  lon: number
+  vehicle_types: VehicleType[]
+  /** All platforms of the group. */
+  stop_ids: StopId[]
+}
+
+/** Journey end point: exactly one of a stop id or a coordinate pair. `name` is echoed back. */
+export type JourneyPlaceInput =
+  { stop_id: StopId; name?: string } | { lat: number; lon: number; name?: string }
+
+export type JourneyTimeMode = 'depart' | 'arrive'
+
+export interface JourneyPreferences {
+  fewer_transfers?: boolean
+  less_walking?: boolean
+  wheelchair?: boolean
+}
+
+/** Body of `POST /api/v1/cities/{city}/journeys/search/`. */
+export interface JourneySearchRequest {
+  from: JourneyPlaceInput
+  to: JourneyPlaceInput
+  /** ISO 8601 with offset; omitted = now. */
+  time?: string
+  time_mode?: JourneyTimeMode
+  preferences?: JourneyPreferences
+}
+
+export interface JourneyPlace {
+  name: string | null
+  lat: number
+  lon: number
+}
+
+export interface LegPlace extends JourneyPlace {
+  stop_id: StopId | null
+}
+
+export type LegMode = 'walk' | VehicleType
+
+export interface LegStop {
+  name: string
+  stop_id: StopId
+}
+
+export interface JourneyLeg {
+  mode: LegMode
+  /** ISO 8601 with offset. */
+  start: string
+  end: string
+  /** Seconds. */
+  duration: number
+  /** Metres. */
+  distance: number
+  from: LegPlace
+  to: LegPlace
+  /** `null` for walking legs. */
+  line: LineSummary | null
+  headsign: string | null
+  trip_id: TripId | null
+  intermediate_stops: LegStop[]
+  geometry: GeoLineString
+}
+
+export interface Itinerary {
+  id: string
+  start: string
+  end: string
+  /** Seconds. */
+  duration: number
+  transfers: number
+  /** Metres. */
+  walk_distance: number
+  /** Seconds. */
+  walk_duration: number
+  legs: JourneyLeg[]
+}
+
+export interface DirectTrip {
+  /** Seconds. */
+  duration: number
+  /** Metres. */
+  distance: number
+}
+
+export interface JourneyComparison {
+  walk: DirectTrip | null
+  bike: DirectTrip | null
+}
+
+/** `POST /api/v1/cities/{city}/journeys/search/` → `200`. */
+export interface JourneySearchResponse {
+  from: JourneyPlace
+  to: JourneyPlace
+  itineraries: Itinerary[]
+  comparison: JourneyComparison
+}

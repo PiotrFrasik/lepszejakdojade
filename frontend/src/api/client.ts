@@ -6,11 +6,14 @@ import type {
   CityId,
   DirectionId,
   HealthResponse,
+  JourneySearchRequest,
+  JourneySearchResponse,
   Line,
   LineId,
   LineRoute,
   ServiceDate,
   StopId,
+  StopSearchResult,
   StopTimetable,
   Trip,
   TripId,
@@ -206,5 +209,30 @@ export function getTrip(
   return apiGet<Trip>(cityPath(city, `trips/${encodeURIComponent(tripId)}/`), {
     signal,
     query: { date },
+  })
+}
+
+/** `GET /api/v1/cities/{city}/stops/?q=`: stop name search (`q` of at least 2 characters). */
+export function searchStops(
+  city: CityId,
+  q: string,
+  signal?: AbortSignal,
+): Promise<StopSearchResult[]> {
+  return apiGet<StopSearchResult[]>(cityPath(city, 'stops/'), { signal, query: { q: q.trim() } })
+}
+
+/**
+ * `POST /api/v1/cities/{city}/journeys/search/`. A missing or unreachable journey planner is an
+ * `ApiError` with status 503 and code `journey_planner_unavailable`.
+ */
+export function searchJourneys(
+  city: CityId,
+  request: JourneySearchRequest,
+  signal?: AbortSignal,
+): Promise<JourneySearchResponse> {
+  return apiRequest<JourneySearchResponse>(cityPath(city, 'journeys/search/'), {
+    method: 'POST',
+    body: request,
+    signal,
   })
 }
