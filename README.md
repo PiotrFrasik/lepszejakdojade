@@ -66,7 +66,7 @@ About 5 minutes, after the quick start above.
 3. Open **Timetable** (`/timetable`), pick a line, then a stop. Compare the weekday, Saturday and Sunday columns.
 4. Search for **Rondo Mogilskie** on `/timetable` and open the stop. Live times show when the Kraków realtime collector has data; otherwise the board shows the timetable.
 5. Open **Tickets** (`/tickets`). Then go back to a journey result to see the ticket hint.
-6. Open the chat (or `/assistant`) and ask "When is the next 52 from Bagatela?" The answer comes from timetable data and shows a departures card. Needs the Gemini key.
+6. Open the chat (or `/assistant`) and ask "When is the next tram from Teatr Bagatela?" (or in Polish "Kiedy najbliższy tramwaj z Teatru Bagatela?"). The answer comes from timetable data and shows a departures card. Needs the Gemini key; the free tier allows about 15 model requests per minute, and one question can use several, so wait a minute if the assistant says it is unavailable.
 7. Switch the language with the PL / EN switcher and check that the interface changes.
 
 ## Known limitations
