@@ -55,6 +55,21 @@ export function getInitialLocale(): AppLocale {
   return detectLocale() ?? DEFAULT_LOCALE
 }
 
+/**
+ * Polish plural forms for messages with three choices `one | few | many`, e.g.
+ * `1 minutę | 2 minuty | 5 minut`: 1 → one; last digit 2–4 except 12–14 → few; otherwise many.
+ * Messages with two choices fall back to `one | other`.
+ */
+export function polishPluralRule(choice: number, choicesLength: number): number {
+  const n = Math.abs(choice)
+  if (choicesLength < 3) return n === 1 ? 0 : 1
+  if (n === 1) return 0
+  const lastDigit = n % 10
+  const lastTwo = n % 100
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14)) return 1
+  return 2
+}
+
 export const i18n = createI18n<[MessageSchema], AppLocale, false>({
   legacy: false,
   locale: getInitialLocale(),
@@ -62,6 +77,9 @@ export const i18n = createI18n<[MessageSchema], AppLocale, false>({
   messages: { pl, en },
   datetimeFormats,
   numberFormats,
+  // A Polish message with three choices is `one | few | many` (see `polishPluralRule`); the
+  // matching English message keeps three choices too (`zero | one | other`, vue-i18n default).
+  pluralRules: { pl: polishPluralRule },
 })
 
 /** Current UI locale, usable outside components (e.g. the API client). */

@@ -50,6 +50,11 @@ export function formatTime(value: DateInput, timeZone?: string | null): string {
   return formatDateTimeKey('time', value, timeZone)
 }
 
+/** 24-hour clock time with seconds, e.g. `21:04:10`. Returns `''` for an invalid date. */
+export function formatTimeSeconds(value: DateInput, timeZone?: string | null): string {
+  return formatDateTimeKey('timeSeconds', value, timeZone)
+}
+
 /** Calendar date, e.g. `14 lis 2026` / `Nov 14, 2026`. Returns `''` for an invalid date. */
 export function formatDate(value: DateInput, timeZone?: string | null): string {
   return formatDateTimeKey('date', value, timeZone)

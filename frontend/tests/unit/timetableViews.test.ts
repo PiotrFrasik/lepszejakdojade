@@ -161,7 +161,7 @@ describe('TimetableHomeView', () => {
     const { wrapper } = await mountView(TimetableHomeView, '/timetable', {
       handler: () => pending,
     })
-    expect(wrapper.find('[role="status"]').text()).toBe('Loading lines…')
+    expect(wrapper.find('.load-status[role="status"]').text()).toBe('Loading lines…')
     release(jsonResponse(linesFor('tram')))
     await flushPromises()
     expect(wrapper.findAll('.line-grid__tile')).toHaveLength(1)

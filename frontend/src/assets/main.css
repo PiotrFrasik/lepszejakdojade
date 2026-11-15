@@ -10,6 +10,9 @@
   --color-surface-alt: #f3f5f8;
   --color-border: #d5dbe3;
   --color-success: #1e8e3e;
+  /* Success colour for small text on white or on the success surface (contrast ≥ 4.5:1). */
+  --color-success-text: #146c2e;
+  --color-success-surface: #edf7ef;
   --color-warning: #c77700;
   /* Warning colour for small text on white (contrast ≥ 4.5:1). */
   --color-warning-text: #8a4b00;

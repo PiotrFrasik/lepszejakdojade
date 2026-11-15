@@ -9,6 +9,7 @@ import {
   formatDuration,
   formatPrice,
   formatTime,
+  formatTimeSeconds,
   type DateInput,
 } from '@/i18n/format'
 import { useCityStore } from '@/stores/city'
@@ -29,6 +30,7 @@ export function useFormat() {
   return {
     timeZone,
     time: (value: DateInput): string => formatTime(value, timeZone.value),
+    timeSeconds: (value: DateInput): string => formatTimeSeconds(value, timeZone.value),
     date: (value: DateInput): string => formatDate(value, timeZone.value),
     dateLong: (value: DateInput): string => formatDateLong(value, timeZone.value),
     dateTime: (value: DateInput): string => formatDateTime(value, timeZone.value),

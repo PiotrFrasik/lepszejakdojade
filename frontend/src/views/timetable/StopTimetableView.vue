@@ -173,6 +173,12 @@ function print(): void {
           }}</span>
           <span class="stop-tt__headsign">→ {{ data.headsign }}</span>
         </p>
+        <p class="stop-tt__board-link no-print">
+          <RouterLink
+            :to="{ name: 'timetable-stop-departures', params: { stopId: data.stop.stop_id } }"
+            >{{ t('timetable.departures.allFromStop') }}</RouterLink
+          >
+        </p>
       </header>
 
       <div class="stop-tt__controls no-print">
@@ -279,6 +285,10 @@ function print(): void {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 0;
+}
+
+.stop-tt__board-link {
   margin: var(--space-2) 0 0;
 }
 
