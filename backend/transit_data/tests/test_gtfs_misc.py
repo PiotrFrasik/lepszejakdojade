@@ -241,6 +241,20 @@ def _other_connection():
     )
 
 
+def _release(conn, key):
+    """Unlock explicitly, then close.
+
+    Closing the client connection does not wait for the server backend to drop its
+    session advisory locks, so a following test could still see the feed as busy.
+    The result is deliberately not asserted so this never hides the original error.
+    """
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_unlock(%s)", [key])
+    finally:
+        conn.close()
+
+
 @pytest.mark.django_db
 def test_feed_lock_is_exclusive_across_connections():
     with pipeline._feed_lock("c", "f") as first:
@@ -261,7 +275,7 @@ def test_feed_lock_is_exclusive_across_connections():
             cursor.execute("SELECT pg_try_advisory_lock(%s)", [pipeline._feed_lock("c", "f").key])
             assert cursor.fetchone()[0] is True
     finally:
-        other.close()
+        _release(other, pipeline._feed_lock("c", "f").key)
 
 
 @pytest.mark.django_db
@@ -284,7 +298,7 @@ def test_import_of_a_locked_feed_returns_busy(tmp_path):
         assert FeedVersion.objects.count() == 0
         assert Stop.objects.count() == 0
     finally:
-        other.close()  # closing the session releases its advisory locks
+        _release(other, pipeline._feed_lock(CITY, FEED).key)
     (result,) = import_city(CITY, FEED, file=feed)
     assert result.outcome == Outcome.IMPORTED
 
@@ -300,7 +314,7 @@ def test_lock_of_one_feed_does_not_block_another(tmp_path):
         (result,) = import_city(CITY, "gv_second", file=feed)
         assert result.outcome == Outcome.IMPORTED
     finally:
-        other.close()
+        _release(other, pipeline._feed_lock(CITY, FEED).key)
 
 
 @pytest.mark.django_db
@@ -315,7 +329,7 @@ def test_lock_is_released_after_failed_import(tmp_path):
             cursor.execute("SELECT pg_try_advisory_lock(%s)", [pipeline._feed_lock(CITY, FEED).key])
             assert cursor.fetchone()[0] is True
     finally:
-        other.close()
+        _release(other, pipeline._feed_lock(CITY, FEED).key)
 
 
 # ------------------------------------------------------------------------- admin
