@@ -8,6 +8,7 @@ from rest_framework import serializers
 from cities.registry import VEHICLE_TYPES
 
 from .calendar import DAY_TYPES
+from .stops import MIN_QUERY_LENGTH
 from .variants import DEPOT, MAIN, OTHER, SHORT_TURN
 
 VARIANT_KINDS = (MAIN, SHORT_TURN, DEPOT, OTHER)
@@ -46,6 +47,18 @@ class DirectionDateQuerySerializer(serializers.Serializer):
 
 class DateQuerySerializer(serializers.Serializer):
     date = _DateParam()
+
+
+class StopSearchQuerySerializer(serializers.Serializer):
+    # CharField trims whitespace before the length check.
+    q = serializers.CharField(
+        min_length=MIN_QUERY_LENGTH,
+        error_messages={
+            # Literal "2" (not "{min_length}"): the blank error is raised without kwargs.
+            "min_length": _("Enter at least 2 characters."),
+            "blank": _("Enter at least 2 characters."),
+        },
+    )
 
 
 # ---------------------------------------------------------------------- responses
@@ -178,3 +191,19 @@ class TripSerializer(serializers.Serializer):
     headsign = serializers.CharField(allow_blank=True)
     wheelchair_accessible = serializers.BooleanField(allow_null=True)
     stops = TripStopSerializer(many=True)
+
+
+class StopSearchResultSerializer(serializers.Serializer):
+    stop_id = serializers.CharField(
+        help_text="Representative platform (the one closest to the group centroid); opaque."
+    )
+    name = serializers.CharField()
+    lat = serializers.FloatField(help_text="Group centroid.")
+    lon = serializers.FloatField(help_text="Group centroid.")
+    vehicle_types = serializers.ListField(
+        child=serializers.ChoiceField(choices=VEHICLE_TYPES),
+        help_text="Vehicle types serving the group.",
+    )
+    stop_ids = serializers.ListField(
+        child=serializers.CharField(), help_text="All platforms of the group."
+    )

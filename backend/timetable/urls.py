@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import LineListView, LineRouteView, StopTimetableView, TripView
+from .views import LineListView, LineRouteView, StopSearchView, StopTimetableView, TripView
 
 app_name = "timetable"
 
@@ -21,4 +21,5 @@ urlpatterns = [
         name="stop-timetable",
     ),
     path("cities/<str:city>/trips/<path:trip_id>/", TripView.as_view(), name="trip"),
+    path("cities/<str:city>/stops/", StopSearchView.as_view(), name="stops"),
 ]

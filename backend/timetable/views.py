@@ -24,9 +24,12 @@ from .serializers import (
     LineListItemSerializer,
     LineRouteSerializer,
     LinesQuerySerializer,
+    StopSearchQuerySerializer,
+    StopSearchResultSerializer,
     StopTimetableSerializer,
     TripSerializer,
 )
+from .stops import search_stops
 
 CITY_PARAM = OpenApiParameter("city", str, OpenApiParameter.PATH, description="City id.")
 LINE_PARAM = OpenApiParameter(
@@ -53,6 +56,14 @@ DATE_PARAM = OpenApiParameter(
 )
 VEHICLE_TYPE_PARAM = OpenApiParameter(
     "vehicle_type", str, OpenApiParameter.QUERY, enum=list(VEHICLE_TYPES), required=False
+)
+Q_PARAM = OpenApiParameter(
+    "q",
+    str,
+    OpenApiParameter.QUERY,
+    required=True,
+    description="Stop name fragment, at least 2 characters after trimming; case- and "
+    "diacritics-insensitive.",
 )
 ERRORS = {400: ErrorSerializer, 404: ErrorSerializer}
 
@@ -192,3 +203,20 @@ class TripView(_PublicView):
             raise NotFound(_("This trip does not run on this date."))
         data = services.build_trip(found, line, trip, day)
         return Response(TripSerializer(data).data)
+
+
+class StopSearchView(_PublicView):
+    """Stop name search for autocomplete. Not paginated, at most 20 results."""
+
+    @extend_schema(
+        operation_id="stops_search",
+        summary="Search stops by name",
+        parameters=[CITY_PARAM, Q_PARAM, ACCEPT_LANGUAGE],
+        responses={200: StopSearchResultSerializer(many=True), **ERRORS},
+        tags=["timetable"],
+    )
+    def get(self, request: Request, city: str) -> Response:
+        found = _city(city)
+        params = _query(StopSearchQuerySerializer, request)
+        results = search_stops(found, Feeds(found), params["q"])
+        return Response(StopSearchResultSerializer(results, many=True).data)
