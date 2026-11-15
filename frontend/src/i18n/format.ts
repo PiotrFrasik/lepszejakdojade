@@ -76,6 +76,34 @@ export function formatPrice(amount: number): string {
   return i18n.global.n(amount, 'price')
 }
 
+/** Decimal string as sent by the API for money (`"6.00"`, `"12.5"`, `"-1.00"`). */
+const DECIMAL_STRING = /^-?\d+(\.\d+)?$/
+
+/**
+ * Price from an API decimal string and an ISO 4217 currency code, e.g. `"6.00"` + `PLN` →
+ * `6,00 zł` / `PLN 6.00`. The string is passed to `Intl.NumberFormat` as is (ES2023 formats
+ * decimal strings exactly), so no float arithmetic is ever done on the amount.
+ * Returns `''` for a malformed amount or an unknown currency code.
+ */
+export function formatMoney(amount: string, currency: string): string {
+  const value = typeof amount === 'string' ? amount.trim() : ''
+  if (!DECIMAL_STRING.test(value)) return ''
+  try {
+    // Always 2 decimal places: all supported cities use PLN (contract: two-place decimal strings).
+    const formatter = new Intl.NumberFormat(i18n.global.locale.value, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    // The app's TypeScript lib is ES2022, whose typings only allow numbers here. `format` is a
+    // bound getter, so calling it detached is fine.
+    return (formatter.format as unknown as (value: string) => string)(value)
+  } catch {
+    return ''
+  }
+}
+
 /**
  * Duration from seconds, rounded to whole minutes: `45 min`, `2 h`, `1 h 5 min`; under half a
  * minute (but more than zero) gives `< 1 min`. Unit words come from the locale files.

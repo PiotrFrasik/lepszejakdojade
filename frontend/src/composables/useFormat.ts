@@ -7,6 +7,7 @@ import {
   formatDateTime,
   formatDistance,
   formatDuration,
+  formatMoney,
   formatPrice,
   formatTime,
   formatTimeSeconds,
@@ -35,6 +36,7 @@ export function useFormat() {
     dateLong: (value: DateInput): string => formatDateLong(value, timeZone.value),
     dateTime: (value: DateInput): string => formatDateTime(value, timeZone.value),
     price: formatPrice,
+    money: formatMoney,
     duration: formatDuration,
     distance: formatDistance,
   }
