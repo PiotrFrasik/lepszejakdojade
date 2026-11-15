@@ -2,10 +2,11 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Map as MapLibreMap, NavigationControl, type MapOptions } from 'maplibre-gl'
 import { onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
+import { prefersReducedMotion, useMapI18n } from '@/composables/useMapI18n'
 import { toLngLat, type City } from '@/config/cities'
-import { MAP_MAX_ZOOM, OSM_COPYRIGHT_URL, buildBaseStyle } from '@/config/map'
+import { MAP_MAX_ZOOM, buildBaseStyle } from '@/config/map'
+import '@/config/mapWorker'
 
 const props = defineProps<{
   city: City
@@ -16,48 +17,9 @@ function cityCamera(): { center: [number, number]; zoom: number } {
   return { center: toLngLat(props.city.map.center), zoom: props.city.map.zoom }
 }
 
-const { t, locale } = useI18n()
+const { t, locale, attributionHtml, mapLocale } = useMapI18n()
 const container = useTemplateRef<HTMLDivElement>('container')
 const map = shallowRef<MapLibreMap | null>(null)
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function attributionHtml(): string {
-  return `&copy; <a href="${OSM_COPYRIGHT_URL}" target="_blank" rel="noopener">${escapeHtml(
-    t('map.osmContributors'),
-  )}</a>`
-}
-
-/** MapLibre's own UI strings (control tooltips etc.), taken from i18n. */
-function mapLocale(): Record<string, string> {
-  return {
-    'Map.Title': t('map.controls.title'),
-    'NavigationControl.ZoomIn': t('map.controls.zoomIn'),
-    'NavigationControl.ZoomOut': t('map.controls.zoomOut'),
-    'NavigationControl.ResetBearing': t('map.controls.resetBearing'),
-    'AttributionControl.ToggleAttribution': t('map.controls.toggleAttribution'),
-    'AttributionControl.MapFeedback': t('map.controls.mapFeedback'),
-    'GeolocateControl.FindMyLocation': t('map.controls.findMyLocation'),
-    'GeolocateControl.LocationNotAvailable': t('map.controls.locationNotAvailable'),
-    'Popup.Close': t('map.controls.popupClose'),
-    'CooperativeGesturesHandler.WindowsHelpText': t('map.controls.cooperativeWindows'),
-    'CooperativeGesturesHandler.MacHelpText': t('map.controls.cooperativeMac'),
-    'CooperativeGesturesHandler.MobileHelpText': t('map.controls.cooperativeMobile'),
-  }
-}
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-}
 
 /** Creates the map; keeps the current camera when re-creating (e.g. after a language change). */
 function createMap(): void {
