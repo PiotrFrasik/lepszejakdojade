@@ -106,6 +106,13 @@
     "title": "Timetables",
     "lineDiagram": "Line route",
     "stopTimetable": "Stop timetable",
+    "stopPage": "Stop",
+    "stopLines": {
+      "title": "Lines at this stop",
+      "loading": "Loading lines…",
+      "empty": "No lines stop here.",
+      "directionPrefix": "Line {line} towards"
+    },
     "vehicleTypesLabel": "Vehicle type",
     "vehicleTypes": {
       "tram": "Trams",

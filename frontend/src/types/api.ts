@@ -421,6 +421,43 @@ export interface StopDepartures {
 }
 
 // ---------------------------------------------------------------------------
+// Stop overview (#56)
+// ---------------------------------------------------------------------------
+
+/** The stop group of `GET /api/v1/cities/{city}/stops/{stop_id}/` (same grouping as stop search). */
+export interface StopOverviewStop {
+  /** The requested platform id. */
+  id: StopId
+  name: string
+  /** Group centroid. */
+  lat: number
+  lon: number
+  vehicle_types: VehicleType[]
+  /** All platforms of the group. */
+  stop_ids: StopId[]
+}
+
+/** One direction of a line at the stop; `platform_id` is the platform it departs from. */
+export interface StopLineDirection {
+  direction: DirectionId
+  headsign: string
+  platform_id: StopId
+}
+
+export interface StopLine {
+  line: LineSummary
+  /** Sorted by `direction`; never empty. */
+  directions: StopLineDirection[]
+}
+
+/** `GET /api/v1/cities/{city}/stops/{stop_id}/`. */
+export interface StopOverview {
+  stop: StopOverviewStop
+  /** Sorted by vehicle type, line group, then naturally by `short_name`. May be empty. */
+  lines: StopLine[]
+}
+
+// ---------------------------------------------------------------------------
 // Assistant (#18)
 // ---------------------------------------------------------------------------
 

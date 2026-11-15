@@ -17,6 +17,7 @@ import type {
   ServiceDate,
   StopDepartures,
   StopId,
+  StopOverview,
   StopSearchResult,
   StopTimetable,
   Trip,
@@ -265,6 +266,18 @@ export function getStopDepartures(
     signal,
     query: { limit: params.limit },
   })
+}
+
+/**
+ * `GET /api/v1/cities/{city}/stops/{stop_id}/`: the stop group of `stopId` and the lines that
+ * serve it, with their directions. Unknown city or stop → `ApiError` with status 404.
+ */
+export function getStopOverview(
+  city: CityId,
+  stopId: StopId,
+  signal?: AbortSignal,
+): Promise<StopOverview> {
+  return apiGet<StopOverview>(cityPath(city, `stops/${encodeURIComponent(stopId)}/`), { signal })
 }
 
 /**

@@ -106,6 +106,13 @@
     "title": "Rozkłady jazdy",
     "lineDiagram": "Trasa linii",
     "stopTimetable": "Rozkład na przystanku",
+    "stopPage": "Przystanek",
+    "stopLines": {
+      "title": "Linie na tym przystanku",
+      "loading": "Wczytywanie linii…",
+      "empty": "Przez ten przystanek nie kursuje żadna linia.",
+      "directionPrefix": "Linia {line} w kierunku"
+    },
     "vehicleTypesLabel": "Rodzaj pojazdu",
     "vehicleTypes": {
       "tram": "Tramwaje",

@@ -14,6 +14,7 @@ import { cityDetail, cityList } from './citiesFixtures'
 import { at, board, departure, liveDeparture } from './departuresFixtures'
 import { jsonResponse, resetEnvironment } from './helpers'
 import { stopResult } from './journeyFixtures'
+import { stopOverview } from './stopOverviewFixtures'
 import { line, timetable } from './timetableFixtures'
 
 vi.mock('maplibre-gl', () => ({
@@ -33,6 +34,9 @@ vi.mock('maplibre-gl', () => ({
 }))
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}))
 
+const isBoard = (url: URL) => url.pathname.endsWith('/departures/')
+const isOverview = (url: URL) => /\/stops\/[^/]+\/$/.test(url.pathname) && !isBoard(url)
+
 type Handler = (url: URL) => Response | Promise<Response> | undefined
 
 async function mountAt(component: object, path: string, handler: Handler) {
@@ -42,7 +46,10 @@ async function mountAt(component: object, path: string, handler: Handler) {
     vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), 'http://localhost')
       calls.push(url.pathname + url.search)
-      return handler(url) ?? jsonResponse([])
+      const handled = handler(url)
+      if (handled) return handled
+      if (isBoard(url)) return jsonResponse(board())
+      return isOverview(url) ? jsonResponse(stopOverview()) : jsonResponse([])
     }),
   )
   const pinia = createPinia()
@@ -63,7 +70,6 @@ async function mountAt(component: object, path: string, handler: Handler) {
 }
 
 const BOARD_PATH = '/timetable/stops/feed_a%3Astop_1'
-const isBoard = (url: URL) => url.pathname.endsWith('/departures/')
 
 beforeEach(() => {
   resetEnvironment()
@@ -99,7 +105,9 @@ describe('StopDeparturesView', () => {
   it('shows a loading status while the board is loading', async () => {
     let release: (r: Response) => void = () => {}
     const slow = new Promise<Response>((resolve) => (release = resolve))
-    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () => slow)
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url) ? slow : undefined,
+    )
     expect(wrapper.find('.load-status[role="status"]').text()).toBe('Loading departures…')
     release(jsonResponse(board()))
     await flushPromises()
@@ -109,22 +117,27 @@ describe('StopDeparturesView', () => {
 
   it('shows an error with a retry button that reloads the board', async () => {
     let fail = true
-    const { wrapper, calls } = await mountAt(StopDeparturesView, BOARD_PATH, () =>
-      fail ? jsonResponse({ error: { code: 'x', message: 'boom' } }, 500) : jsonResponse(board()),
+    const { wrapper, calls } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      !isBoard(url)
+        ? undefined
+        : fail
+          ? jsonResponse({ error: { code: 'x', message: 'boom' } }, 500)
+          : jsonResponse(board()),
     )
+    const boardCalls = () => calls.filter((c) => c.includes('/departures/'))
     expect(wrapper.find('[role="alert"]').exists()).toBe(true)
-    expect(calls).toHaveLength(1)
+    expect(boardCalls()).toHaveLength(1)
     fail = false
     await wrapper.find('[role="alert"] button').trigger('click')
     await flushPromises()
-    expect(calls).toHaveLength(2)
+    expect(boardCalls()).toHaveLength(2)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(1)
   })
 
   it('shows an empty-state message for a valid board without departures', async () => {
-    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () =>
-      jsonResponse(board({ departures: [] })),
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url) ? jsonResponse(board({ departures: [] })) : undefined,
     )
     expect(wrapper.text()).toContain('No departures from this stop in the next 3 hours.')
     expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(0)
@@ -132,13 +145,15 @@ describe('StopDeparturesView', () => {
   })
 
   it('shows a timetable-only note and no live markers when realtime is unavailable', async () => {
-    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () =>
-      jsonResponse(
-        board({
-          realtime_available: false,
-          departures: [liveDeparture(300, { scheduled: at(10) })],
-        }),
-      ),
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url)
+        ? jsonResponse(
+            board({
+              realtime_available: false,
+              departures: [liveDeparture(300, { scheduled: at(10) })],
+            }),
+          )
+        : undefined,
     )
     expect(wrapper.find('[data-testid="no-realtime"]').text()).toContain('Timetable only')
     expect(wrapper.find('.departure__live').exists()).toBe(false)
@@ -157,18 +172,24 @@ describe('StopDeparturesView', () => {
 
   it('shows the messages in Polish after switching the language', async () => {
     applyLocale('pl')
-    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () =>
-      jsonResponse(board({ departures: [] })),
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url) ? jsonResponse(board({ departures: [] })) : undefined,
     )
     expect(wrapper.text()).toContain('Brak odjazdów z tego przystanku')
     expect(wrapper.text()).toContain('Zaktualizowano')
   })
 
   it('keeps the board and shows a one-time warning when a refresh fails', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    })
     let fail = false
-    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () =>
-      fail ? jsonResponse({ error: { code: 'x', message: 'boom' } }, 500) : jsonResponse(board()),
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      !isBoard(url)
+        ? undefined
+        : fail
+          ? jsonResponse({ error: { code: 'x', message: 'boom' } }, 500)
+          : jsonResponse(board()),
     )
     expect(wrapper.find('.stop-board__problem').exists()).toBe(false)
     fail = true
@@ -181,6 +202,125 @@ describe('StopDeparturesView', () => {
     await vi.advanceTimersByTimeAsync(30_000)
     await flushPromises()
     expect(wrapper.find('.stop-board__problem').exists()).toBe(false)
+  })
+})
+
+const notFound = () => jsonResponse({ error: { code: 'not_found', message: 'nope' } }, 404)
+const serverError = () => jsonResponse({ error: { code: 'x', message: 'boom' } }, 500)
+const OVERVIEW_URL = '/api/v1/cities/alpha/stops/feed_a%3Astop_1/'
+
+describe('StopDeparturesView lines section', () => {
+  it('requests the departures and the stop overview in parallel', async () => {
+    const release: Array<(r: Response) => void> = []
+    const { calls } = await mountAt(
+      StopDeparturesView,
+      BOARD_PATH,
+      () => new Promise<Response>((resolve) => release.push(resolve)),
+    )
+    // Both requests were sent before either answered.
+    expect(calls).toContain(OVERVIEW_URL)
+    expect(calls).toContain('/api/v1/cities/alpha/stops/feed_a%3Astop_1/departures/')
+    expect(release).toHaveLength(2)
+    release[0]!(jsonResponse(board()))
+    release[1]!(jsonResponse(stopOverview()))
+  })
+
+  it('shows a loading status for the lines while the overview is pending', async () => {
+    let release: (r: Response) => void = () => {}
+    const slow = new Promise<Response>((resolve) => (release = resolve))
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isOverview(url) ? slow : isBoard(url) ? jsonResponse(board()) : undefined,
+    )
+    expect(wrapper.text()).toContain('Loading lines…')
+    expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(1)
+    release(jsonResponse(stopOverview()))
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Loading lines…')
+    expect(wrapper.findAll('[data-testid="stop-line"]').length).toBeGreaterThan(0)
+  })
+
+  it('renders the lines section with a heading', async () => {
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () => undefined)
+    expect(wrapper.text()).toContain('Lines at this stop')
+    expect(wrapper.find('h1').text()).toBe('Northgate')
+    expect(wrapper.findAll('[data-testid="stop-line"]')).toHaveLength(1)
+  })
+
+  it('shows the empty state when no lines stop there', async () => {
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isOverview(url) ? jsonResponse(stopOverview({ lines: [] })) : undefined,
+    )
+    expect(wrapper.find('[data-testid="no-stop-lines"]').text()).toBe('No lines stop here.')
+  })
+
+  it('keeps the board when the overview fails, and retries only the overview', async () => {
+    let failOverview = true
+    const { wrapper, calls } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isOverview(url) && failOverview ? serverError() : undefined,
+    )
+    expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(1)
+    const alerts = wrapper.findAll('[role="alert"]')
+    expect(alerts).toHaveLength(1)
+    const boardBefore = calls.filter((c) => c.includes('/departures/')).length
+    failOverview = false
+    await alerts[0]!.find('button').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="stop-line"]')).toHaveLength(1)
+    expect(calls.filter((c) => c.includes('/departures/'))).toHaveLength(boardBefore)
+    expect(calls.filter((c) => c === OVERVIEW_URL)).toHaveLength(2)
+  })
+
+  it('keeps the lines when the board fails, and retries only the board', async () => {
+    let failBoard = true
+    const { wrapper, calls } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url) && failBoard ? serverError() : undefined,
+    )
+    expect(wrapper.findAll('[data-testid="stop-line"]')).toHaveLength(1)
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(1)
+    failBoard = false
+    await wrapper.find('[role="alert"] button').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(1)
+    expect(calls.filter((c) => c === OVERVIEW_URL)).toHaveLength(1)
+  })
+
+  it('shows one not-found message when both requests return 404, and retry reloads both', async () => {
+    let missing = true
+    const { wrapper, calls } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      missing && (isBoard(url) || isOverview(url)) ? notFound() : undefined,
+    )
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('This stop was not found in the selected city.')
+    expect(wrapper.text()).not.toContain('Lines at this stop')
+    missing = false
+    await wrapper.find('[role="alert"] button').trigger('click')
+    await flushPromises()
+    expect(calls.filter((c) => c === OVERVIEW_URL)).toHaveLength(2)
+    expect(calls.filter((c) => c.includes('/departures/'))).toHaveLength(2)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="departure-row"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="stop-line"]')).toHaveLength(1)
+  })
+
+  it('does not merge the sections when only the board returns 404', async () => {
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, (url) =>
+      isBoard(url) ? notFound() : undefined,
+    )
+    expect(wrapper.findAll('[data-testid="stop-line"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Lines at this stop')
+  })
+
+  it('shows the lines section in Polish', async () => {
+    applyLocale('pl')
+    const { wrapper } = await mountAt(StopDeparturesView, BOARD_PATH, () => undefined)
+    expect(wrapper.text()).toContain('Linie na tym przystanku')
+  })
+
+  it('uses the stop page title key for the route', () => {
+    const route = routes.find((r) => r.name === 'timetable-stop-departures')
+    expect(route?.meta?.titleKey).toBe('timetable.stopPage')
   })
 })
 
