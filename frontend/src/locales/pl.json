@@ -280,5 +280,48 @@
       "value": "{duration} · {distance}",
       "unavailable": "niedostępne"
     }
+  },
+  "assistant": {
+    "title": "Asystent",
+    "open": "Otwórz asystenta",
+    "close": "Zamknij asystenta",
+    "clear": "Nowa rozmowa",
+    "intro": "Zapytaj o odjazdy, połączenia lub przystanki w mieście {city}. Asystent odpowiada wyłącznie na podstawie rozkładów jazdy z tej aplikacji.",
+    "introNoCity": "Najpierw wybierz miasto, aby zapytać asystenta.",
+    "suggestionsTitle": "Przykładowe pytania",
+    "suggestions": {
+      "departures": "Kiedy najbliższe odjazdy z dworca głównego?",
+      "journey": "Jak dojechać z dworca głównego na lotnisko?",
+      "lines": "Jakie linie zatrzymują się przy dworcu głównym?"
+    },
+    "conversationLabel": "Rozmowa z asystentem",
+    "you": "Ty",
+    "assistantName": "Asystent",
+    "typing": "Asystent pisze…",
+    "announceAnswer": "Asystent: {text}",
+    "inputLabel": "Twoje pytanie",
+    "placeholder": "Zapytaj o odjazd lub połączenie…",
+    "send": "Wyślij",
+    "counter": "{count} / {max}",
+    "tooLong": "Pytanie jest za długie (maksymalnie {max} znaków).",
+    "emptyAnswer": "Asystent nie odpowiedział żadnym tekstem.",
+    "dismiss": "Zamknij komunikat",
+    "problems": {
+      "validation": "Nie udało się przetworzyć pytania. Sformułuj je inaczej i spróbuj ponownie.",
+      "rateLimited": "Zadajesz zbyt wiele pytań. Kolejne możesz zadać za {seconds} s.",
+      "rateLimitedWait": "Zadajesz zbyt wiele pytań. Odczekaj chwilę i spróbuj ponownie.",
+      "rateLimitedOver": "Możesz już zadać kolejne pytanie.",
+      "unavailable": "Asystent jest teraz niedostępny. Spróbuj później albo skorzystaj z wyszukiwarki połączeń i rozkładów."
+    },
+    "cards": {
+      "journeyTitle": "{from} → {to}",
+      "showOnMap": "Pokaż na mapie",
+      "departuresTitle": "Odjazdy z przystanku {stop}",
+      "departureLink": "Linia {line} w kierunku {headsign} o {time}. Otwórz rozkład przystanku",
+      "departureLinkDay": "Linia {line} w kierunku {headsign} o {time}, {day}. Otwórz rozkład przystanku",
+      "stopsTitle": "Pasujące przystanki",
+      "stopQuestion": "Najbliższe odjazdy z przystanku {stop}",
+      "stopAsk": "Zapytaj o przystanek {stop}"
+    }
   }
 }

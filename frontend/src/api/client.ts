@@ -1,6 +1,8 @@
 import { getCurrentLocale } from '@/i18n'
 import type {
   ApiErrorBody,
+  ChatRequest,
+  ChatResponse,
   City,
   CityDetail,
   CityId,
@@ -30,14 +32,33 @@ export class ApiError extends Error {
   readonly code: string
   /** Parsed response body, if any. */
   readonly body: unknown
+  /** Seconds from the `Retry-After` header (e.g. on `429`), or `null` when absent. */
+  readonly retryAfter: number | null
 
-  constructor(status: number, code: string, message: string, body?: unknown) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    body?: unknown,
+    retryAfter: number | null = null,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.body = body
+    this.retryAfter = retryAfter
   }
+}
+
+/** `Retry-After` as whole seconds; HTTP-date values are converted relative to now. */
+export function parseRetryAfter(value: string | null | undefined): number | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (/^\d+$/.test(trimmed)) return Number(trimmed)
+  const at = Date.parse(trimmed)
+  if (Number.isNaN(at)) return null
+  return Math.max(0, Math.ceil((at - Date.now()) / 1000))
 }
 
 export type QueryValue = string | number | boolean | null | undefined
@@ -116,10 +137,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   if (!response.ok && !acceptStatuses.includes(response.status)) {
+    const retryAfter = parseRetryAfter(response.headers?.get?.('Retry-After'))
     if (isApiErrorBody(data)) {
-      throw new ApiError(response.status, data.error.code, data.error.message, data)
+      throw new ApiError(response.status, data.error.code, data.error.message, data, retryAfter)
     }
-    throw new ApiError(response.status, 'http_error', response.statusText, data)
+    throw new ApiError(response.status, 'http_error', response.statusText, data, retryAfter)
   }
 
   return data as T
@@ -235,4 +257,12 @@ export function searchJourneys(
     body: request,
     signal,
   })
+}
+
+/**
+ * `POST /api/v1/assistant/chat/`. Errors: `400 validation_error`, `429 rate_limited`
+ * (`ApiError.retryAfter` from the `Retry-After` header), `503 assistant_unavailable`.
+ */
+export function sendChat(request: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
+  return apiRequest<ChatResponse>('/assistant/chat/', { method: 'POST', body: request, signal })
 }
