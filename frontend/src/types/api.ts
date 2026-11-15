@@ -376,6 +376,51 @@ export interface DataSourcesResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Stop departures board (#73)
+// ---------------------------------------------------------------------------
+
+/**
+ * `live`: `expected` and `delay_seconds` are set (delay may be negative or 0); `canceled` and
+ * `scheduled` (no live data): both are `null`.
+ */
+export type DepartureStatus = 'live' | 'canceled' | 'scheduled'
+
+export interface StopDeparture {
+  line: LineSummary
+  trip_id: TripId
+  headsign: string
+  /** Platform (stop id) the vehicle departs from, within the stop group. */
+  platform_id: StopId
+  platform_code: string | null
+  /** ISO 8601 with offset. */
+  scheduled: string
+  /** ISO 8601 with offset; only for `live`. */
+  expected: string | null
+  /** Only for `live`; negative = early. */
+  delay_seconds: number | null
+  status: DepartureStatus
+}
+
+/** The stop group the board covers (same grouping as stop search). */
+export interface DeparturesStop {
+  /** The requested platform id. */
+  id: StopId
+  name: string
+  stop_ids: StopId[]
+}
+
+/** `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=`. */
+export interface StopDepartures {
+  stop: DeparturesStop
+  /** ISO 8601 with offset. */
+  generated_at: string
+  /** `false`: no live data for the city or the feed is stale; every departure is `scheduled`. */
+  realtime_available: boolean
+  /** Sorted by effective time (expected, else scheduled), then scheduled. May be empty. */
+  departures: StopDeparture[]
+}
+
+// ---------------------------------------------------------------------------
 // Assistant (#18)
 // ---------------------------------------------------------------------------
 

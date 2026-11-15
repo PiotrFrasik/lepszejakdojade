@@ -15,6 +15,7 @@ import type {
   LineId,
   LineRoute,
   ServiceDate,
+  StopDepartures,
   StopId,
   StopSearchResult,
   StopTimetable,
@@ -247,6 +248,23 @@ export function searchStops(
   signal?: AbortSignal,
 ): Promise<StopSearchResult[]> {
   return apiGet<StopSearchResult[]>(cityPath(city, 'stops/'), { signal, query: { q: q.trim() } })
+}
+
+/**
+ * `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=`: next departures of the whole
+ * stop group of `stopId`, with live times where available. `limit` 1–30 (API default 15).
+ * Unknown city or stop → `ApiError` with status 404.
+ */
+export function getStopDepartures(
+  city: CityId,
+  stopId: StopId,
+  params: { limit?: number } = {},
+  signal?: AbortSignal,
+): Promise<StopDepartures> {
+  return apiGet<StopDepartures>(cityPath(city, `stops/${encodeURIComponent(stopId)}/departures/`), {
+    signal,
+    query: { limit: params.limit },
+  })
 }
 
 /**
