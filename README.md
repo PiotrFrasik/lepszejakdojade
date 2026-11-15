@@ -1,62 +1,116 @@
 # lepszejakdojade
 
-Public transport web app for Kraków and Warsaw. It is in early development: the foundation
-(containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
-A realtime collector for Kraków trip updates has started and stores data in the database.
-Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
-shows them. Journey planning A→B is built on the home page. An AI chat assistant answers questions about
-stops, journeys, departures and timetables. A live departures board for Kraków stops is built. A ticket catalogue
-with a ticket hint under journey results is built. Live vehicles, demo checkout and accounts are planned.
+Public transport web app for Kraków and Warsaw. Plan a journey from A to B, browse timetables, see the
+departures at a stop, look up tickets and ask an AI assistant. The app is bilingual (Polish / English) with a
+language switcher. Journey search runs on OpenTripPlanner 2; the app has no routing code of its own.
 
-Full product description: [docs/concept.md](docs/concept.md).
-The app is bilingual (Polish / English) with a language switcher.
+It is a recruitment project, built with a team of Claude Code agents coordinated by one session. It is a demo,
+not a commercial product. Product description: [docs/concept.md](docs/concept.md).
 
-## Features
+Screenshots and GIFs are not in the repository yet.
 
-- **Timetable browser** (built, #10, #11): lines grouped by type, line diagram with a route map, stop
-  timetables for weekdays, Saturdays and Sundays/holidays, and a trip view. Routes are in
-  [Timetable browser](#timetable-browser).
-- **Live departures board** (built, #73, #74): next departures of a stop group, with live times for Kraków
-  when the realtime data is fresh. Otherwise the board shows the timetable. Routes are in
-  [Live departures](#live-departures). API: [docs/api.md](docs/api.md#departures-73).
-- **Stop view** (built, #9, #56): the departures board and the lines serving the stop, with their directions.
-  Routes are in [Stop view](#stop-view). API: [docs/api.md](docs/api.md#stop-overview-9).
-- **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
-  my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
-  a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
-- **Data sources** (built, #25, #29): a Data sources page with the licence attributions of each city's data
-  and the age of its timetables. API: [docs/api.md](docs/api.md#data-sources-25).
-- **AI chat assistant** (built, #18, #19): a chat panel on every page and the `/assistant` page. Ask in
-  Polish or English for stops, journeys, departures, lines and timetables. Answers come only from app data
-  through six read-only tools. Journeys, departures and stops are shown as cards. Details are in
-  [AI chat assistant](#ai-chat-assistant).
-- **Tickets** (built, #14, #82): the ticket catalogue per city at `/tickets`, and a ticket hint under journey
-  results. Routes are in [Tickets](#tickets). API: [docs/api.md](docs/api.md#tickets-14).
-- **Planned:** live vehicles (#20, #21), nearby stop search and colloquial stop names (#77), delay statistics and
-  predictions (#22, #23), demo ticket checkout and accounts (#16, #17).
+## What works
 
-Screenshots and GIFs will be added when the first user-facing features are merged.
-
-## Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
-- [Node.js 22](https://nodejs.org/) on the host, only if you want to run frontend tools outside Docker
-- Git
+| Feature | Where in the app | Status |
+|---|---|---|
+| Journey search A→B with map, route, walk and bike comparison, preferences (#12, #13) | Home page `/` | built (Kraków graph; Warsaw after its graph is built) |
+| Timetable browser: lines, line diagram, route map, stop timetables, trip view (#10, #11) | `/timetable` | built |
+| Stop view: lines at the stop and departures board (#9, #56, #73, #74) | `/timetable/stops/:stopId`, from stop search on `/timetable` | built (live times for Kraków only) |
+| AI chat assistant: Gemini with function calling, six read-only tools (#18, #19) | Chat panel on every page, `/assistant` | built (needs `GEMINI_API_KEY`) |
+| Data sources page with licences and data age (#25, #29) | `/data-sources`; API `GET /api/v1/data-sources/` | built |
+| Ticket catalogue per city (#14, #82) | `/tickets` | built (Warsaw prices unverified) |
+| Ticket hint under journey results (#14, #82) | Journey results on `/` | partial: single and time tickets, first zone only (#83) |
+| Polish / English switcher | Every page | built |
+| Accounts, favourites and search history (#15) | — | not built |
+| Demo checkout and QR demo tickets (#16, #17) | — | not built |
+| Live vehicle map and service alerts (#20, #21) | — | not built |
+| Warsaw realtime data (#20) | — | not built |
+| Delay statistics and predictions (#22–#24) | — | not built |
+| Nightly OTP graph rebuilds (#51) | — | not built |
+| Nearby stop search and colloquial stop names (#77) | — | not built |
 
 ## Quick start
 
+Needs [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose) and Git.
+[Node.js 22](https://nodejs.org/) on the host is optional, for running frontend tools outside Docker.
+
 ```bash
-cp .env.example .env        # optional: compose has defaults for everything
+cp .env.example .env                                              # optional; needed for the chat (see Gemini API key)
 docker compose up -d --build
+docker compose exec backend python manage.py import_gtfs krakow  # load the Kraków timetables
+make otp-build CITY=krakow                                        # build the Kraków journey graph
+make otp-up CITY=krakow                                           # start its OTP service
 ```
+
+Without `make` (for example in PowerShell), run the manual steps in [OpenTripPlanner graphs](#opentripplanner-graphs).
+Journey search returns an error until the Kraków OTP service is running.
 
 | What | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
 | API health | http://localhost:8000/api/v1/health/ |
 | Swagger UI (OpenAPI) | http://localhost:8000/api/docs/ |
+| Django admin | http://localhost:8000/admin/ (create a login first: `docker compose exec backend python manage.py createsuperuser`) |
 
-Stop the stack with `docker compose down`.
+Stop the stack with `docker compose down`. If a local PostgreSQL already uses port 5432, set `DB_PORT`
+in `.env` (for example `DB_PORT=55432`) and run `docker compose up -d` again. See [Windows notes](#windows-notes).
+
+Warsaw works the same way: `import_gtfs warszawa`, then `make otp-build CITY=warszawa` (peak memory about 7.4 GB).
+
+## Demo walkthrough
+
+About 5 minutes, after the quick start above.
+
+1. Open http://localhost:5173 and pick **Kraków** in the city picker.
+2. On the home page, search from **Rondo Mogilskie** to **Bagatela**. Check the route on the map and the walk and bike comparison.
+3. Open **Timetable** (`/timetable`), pick a line, then a stop. Compare the weekday, Saturday and Sunday columns.
+4. Search for **Rondo Mogilskie** on `/timetable` and open the stop. Live times show when the Kraków realtime collector has data; otherwise the board shows the timetable.
+5. Open **Tickets** (`/tickets`). Then go back to a journey result to see the ticket hint.
+6. Open the chat (or `/assistant`) and ask "When is the next 52 from Bagatela?" The answer comes from timetable data and shows a departures card. Needs the Gemini key.
+7. Switch the language with the PL / EN switcher and check that the interface changes.
+
+## Known limitations
+
+- **Warsaw ticket prices are unverified.** They come from memory; the official sites block automated checks.
+- **The ticket hint assumes the first zone** (#83) and considers single and time tickets only.
+- **Warsaw has no journey graph or realtime data** unless you build the graph. Its timetable comes from one community feed (mkuran.pl).
+- **Delay predictions are not built.** They need weeks of collected data (#22–#24).
+- **Realtime collection runs only while the local stack is up.** Hosting is not decided.
+- **Demo, not a commercial product.** No accounts, no purchase, no production hosting. Map tiles come from the OpenStreetMap public server, which is for development only.
+
+Full list: [Detailed limitations](#detailed-limitations).
+
+## How it was built
+
+The app was built with Claude Code agents, coordinated by one session. The coordinator plans, delegates and
+reports. It writes no application code.
+
+| Agent | Owns |
+|---|---|
+| coordinator | Plans each feature, writes the API contract, creates issues and branches |
+| backend | Django API in `backend/` (except the two areas below) |
+| data | GTFS import, realtime collector, OTP graphs (`backend/transit_data/`, `otp/`) |
+| ai | Gemini chat, tools and rate limits (`backend/assistant/`) |
+| frontend | Vue 3 app (`frontend/`) |
+| tester | Backend and frontend tests, end-to-end tests |
+| reviewer | Reviews each branch before Piotr's manual test |
+| docs | README, `docs/`, changelog |
+| devops | Docker, CI, Makefile, `.env.example`, commits and pull requests |
+
+- **Contract first.** An endpoint is written in [docs/api.md](docs/api.md) before backend and frontend start.
+- **One issue, one branch, one PR.** Code agents work in parallel, each in its own git worktree. Piotr approves every commit and merges the PRs.
+- **Gates.** Tests, then review (at most two fix rounds), then Piotr's manual test before any commit.
+- **Path guard.** A hook blocks each agent from editing outside its area.
+- **Usage limits.** The agents share one plan allowance, so at most two code agents run at once.
+
+In numbers: 28 starter backlog items ([docs/backlog.md](docs/backlog.md)), 15 feature entries in the log, PRs up to #85.
+
+Read more: the [AI workflow log](docs/ai-workflow/log.md) (per feature: agent reports, review findings and
+manual-test feedback) and the [decision records](docs/decisions.md) (40 entries).
+
+## Setup details
+
+Details for the steps in the quick start.
 
 ### OpenTripPlanner graphs
 
@@ -116,7 +170,7 @@ The AI assistant needs a Google Gemini API key. Without it, the chat returns `50
 3. Optional: set `GEMINI_MODEL` (default `gemini-flash-latest`).
 
 The free Gemini tier may let Google use prompts to improve its products. Do not type personal data into the chat.
-The assistant variables are not yet listed in `docker-compose.yml` or `.env.example` (follow-up).
+`GEMINI_MODEL` is not yet listed in `.env.example` (follow-up).
 
 Never commit `.env`. It is listed in `.gitignore`.
 
@@ -329,7 +383,7 @@ not secrets.
   `DB_PORT=55432` in `.env` and run `docker compose up -d` again. Only the host port changes; the
   containers still use 5432 inside the Docker network.
 
-## Known limitations
+## Detailed limitations
 
 - Map tiles are loaded directly from `tile.openstreetmap.org`. This follows the OSM tile usage
   policy and is fine for development, but not for production traffic. A tile provider must be
@@ -387,7 +441,6 @@ docker-compose.yml, Makefile, .env.example
 - [docs/backlog.md](docs/backlog.md): planned work
 - [docs/decisions.md](docs/decisions.md): short decision records
 - [docs/ai-workflow/log.md](docs/ai-workflow/log.md): log of features built with AI agents
-- `docs/ai-workflow/README.md` (planned): how the app is built with AI agents
 
 ## License
 
