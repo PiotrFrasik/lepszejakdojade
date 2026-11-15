@@ -637,3 +637,70 @@ wrong platform. The first frontend version did this; the tester found it and it 
 **Consequences.**
 - The departure object is larger by one field.
 - The contract gap was resolved in `docs/api.md` by the coordinator.
+
+## 35. Unchanged feed polls count as fresh
+
+**Status:** accepted (2026-11-15, #73)
+
+**Context.** The collector stores status `unchanged` when a feed's header timestamp equals the one of the last
+poll. The feed has not changed, so the stored times are still the latest. The departures board needs a rule for
+when live data is fresh.
+
+**Decision.** A `FeedFetch` with status `unchanged` counts as fresh, like `ok`. Any other status is not fresh.
+
+**Alternatives.** Count only `ok` as fresh. The reasons are not recorded here.
+
+**Consequences.**
+- A feed that answers `unchanged` on every poll keeps the board live.
+- Freshness depends on the last successful poll, not on when the data last changed.
+
+## 36. ZTP delay 0 is shown as live on time
+
+**Status:** accepted (2026-11-15, #73)
+
+**Context.** ZTP sends a prediction for every upcoming stop, so a delay of 0 is a prediction that the vehicle is on
+time. The scheduled time is not in the feed, so the board needs a rule for which time to show.
+
+**Decision.** When the feed gives both a time and a delay, the board uses the feed's time and delay. A live
+departure with delay 0 is shown as "on time" with the live marker, not as scheduled.
+
+**Alternatives.** Show a delay of 0 as scheduled. Rejected: every predicted ZTP departure would then look scheduled.
+
+**Consequences.**
+- "On time" means the feed predicted it. It is not inferred from the timetable.
+- Bus last-stop departures with time 0 and delay 0 are still treated as missing (see `docs/architecture.md`).
+
+## 37. Live events match by stop sequence, with a stop fallback
+
+**Status:** accepted (2026-11-15, #73)
+
+**Context.** A trip can call at the same stop twice, for example on a loop. Matching on trip and stop only can
+attach a live time to the wrong call. Bus updates carry `stop_sequence` for about 14–20% of updates. Tram updates
+carry none.
+
+**Decision.** A live event matches a scheduled call by trip and `stop_sequence`. If either side has no
+`stop_sequence`, the match uses the stop. An event with a different, non-null `stop_sequence` never matches.
+
+**Alternatives.** Match on trip and stop only. Rejected: review found that a loop trip could take the wrong time.
+
+**Consequences.**
+- Tram events, and bus events without a sequence, match by stop. On a loop trip they can still match the wrong call.
+- A bus event that has a sequence matches only its own call.
+
+## 38. Realtime feeds link to one static feed each
+
+**Status:** accepted (2026-11-15, #73)
+
+**Context.** Kraków tram and bus trip ids follow the same pattern. A trip id alone can match a trip in the other
+feed.
+
+**Decision.** Each `gtfs_rt` feed with entity `trip_updates` sets `static_feed` to the id of its `gtfs_static` feed.
+Trip matching uses only that pair. `static_feed` is required when `realtime.departures` is true. The registry
+rejects a missing value at startup.
+
+**Alternatives.** Match trip ids across all static feeds of the city. Rejected: the shared id pattern gives false
+matches.
+
+**Consequences.**
+- A new realtime feed needs a `static_feed` entry in its city config.
+- A feed without `static_feed` is allowed only while `realtime.departures` is off.

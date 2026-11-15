@@ -5,7 +5,7 @@ Public transport web app for Kraków and Warsaw. It is in early development: the
 A realtime collector for Kraków trip updates has started and stores data in the database.
 Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
 shows them. Journey planning A→B is built on the home page. An AI chat assistant answers questions about
-stops, journeys, departures and timetables. The stop view, tickets and live departures are planned.
+stops, journeys, departures and timetables. A live departures board for Kraków stops is built. Lines at a stop, tickets and live vehicles are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
@@ -15,6 +15,9 @@ The app is bilingual (Polish / English) with a language switcher.
 - **Timetable browser** (built, #10, #11): lines grouped by type, line diagram with a route map, stop
   timetables for weekdays, Saturdays and Sundays/holidays, and a trip view. Routes are in
   [Timetable browser](#timetable-browser).
+- **Live departures board** (built, #73, #74): next departures of a stop group, with live times for Kraków
+  when the realtime data is fresh. Otherwise the board shows the timetable. Routes are in
+  [Live departures](#live-departures). API: [docs/api.md](docs/api.md#departures-73).
 - **Journey planning** (built, #12, #13): A→B on the home page with stop autocomplete, map picking,
   my location, depart or arrive time, preferences (fewer transfers, less walking, wheelchair), results with
   a route on the map, and walk and bike comparison. Routes are in [Journey planning](#journey-planning).
@@ -24,7 +27,7 @@ The app is bilingual (Polish / English) with a language switcher.
   Polish or English for stops, journeys, departures, lines and timetables. Answers come only from app data
   through six read-only tools. Journeys, departures and stops are shown as cards. Details are in
   [AI chat assistant](#ai-chat-assistant).
-- **Planned:** live departures and vehicles (#20, #21), delay statistics and predictions (#22, #23),
+- **Planned:** live vehicles (#20, #21), lines at a stop (#56), delay statistics and predictions (#22, #23),
   tickets (demo).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
@@ -127,6 +130,9 @@ City configuration lives in `backend/cities/config/<id>.yaml`, one file per city
 - `line_group_rules` (internal, not returned by the API) sets the line groups of the timetable browser.
   Each rule has `vehicle_types`, `feeds` and a `short_name` regex that maps to a group. The first
   matching rule wins; a line with no match goes to the first group.
+- `static_feed` (on a `gtfs_rt` feed with entity `trip_updates`) names the `gtfs_static` feed that the realtime
+  feed's trip ids belong to. It is required on every such feed when `realtime.departures` is true; the app
+  does not start without it. See [Live departures](#live-departures).
 
 ## Realtime data collector
 
@@ -156,8 +162,8 @@ feeds of each city every `REALTIME_POLL_INTERVAL_SECONDS` (default 30). It runs 
   `.env.example`; set them in the settings file if needed.
 
 What the data looks like and what is missing is in [docs/architecture.md](docs/architecture.md).
-Short version: tram messages have no delays. The static GTFS import (#7) is built, but the
-collector does not use it yet. Raw events are meant to be kept for 60 days; the deletion job comes
+Short version: tram messages have no delays. The collector stores what the feeds say; the departures
+board joins it with the static GTFS import (#7) at request time. Raw events are meant to be kept for 60 days; the deletion job comes
 with #22 and is not built yet.
 
 ## Static timetables (GTFS)
@@ -205,6 +211,22 @@ Built on the active static GTFS versions (see [Static timetables](#static-timeta
   Contract: [docs/api.md](docs/api.md#timetable-10).
 - Backend app: `backend/timetable/`. Frontend: `frontend/src/views/timetable/`.
 
+## Live departures
+
+The departures board shows the next departures of a stop group in Kraków and, without live data, in Warsaw.
+No login.
+
+- Page: `/timetable/stops/:stopId`. Open it from stop search on `/timetable` or from a stop timetable.
+- API (read-only): `GET /api/v1/cities/{city}/stops/{stop_id}/departures/?limit=`. Contract:
+  [docs/api.md](docs/api.md#departures-73).
+- Backend: `backend/timetable/departures.py`. Frontend: `StopDeparturesView`, `DepartureRow`, `useStopDepartures`
+  and `utils/departures.ts`.
+- The board refreshes 30 s after the previous response and pauses when the tab is hidden. After 5 min without a
+  successful refresh it shows the timetable only.
+- Development only: `VITE_DEPARTURES_MOCK=true` replaces the API with a mock on the dev server. It is never in
+  production builds.
+- Rules and the data flow are in [docs/architecture.md](docs/architecture.md#live-departures-implemented-73-74).
+
 ## Journey planning
 
 Built on the OTP graphs (see [OpenTripPlanner graphs](#opentripplanner-graphs)). No login.
@@ -224,7 +246,7 @@ The assistant is the `assistant` Django app (`POST /api/v1/assistant/chat/`) and
   (no SDK). Key from `GEMINI_API_KEY`, model from `GEMINI_MODEL`. See [Gemini API key](#gemini-api-key).
 - **Tools.** The model can call six read-only tools: `search_stops`, `plan_journey`, `next_departures`,
   `list_lines`, `get_line_route` and `get_stop_timetable`. They use the same services as the public endpoints.
-  The model answers only from tool results. Tickets and live data are not available yet, and the assistant says so.
+  The model answers only from tool results. Tickets and live times are not available yet. The assistant's departures use the static timetable only.
 - **No stored chats.** The API keeps no state. The browser keeps the conversation in `sessionStorage` and sends
   the last 20 messages with each request.
 - **Language.** The answer uses the `Accept-Language` language, whatever language the question is in.
@@ -285,8 +307,12 @@ not secrets.
   keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
   The national rail feed comes from the same source and has the same risk.
 - National rail has static timetables only. There is no realtime data for it yet.
-- Timetable browser: frequency-based trips show the template trip's times in the trip view. The stop
-  entry (a stop page without a line) and the departures board are planned (#9, #56).
+- Timetable browser: frequency-based trips show the template trip's times in the trip view. The list of
+  lines at a stop is planned (#56).
+- Live departures: the collector drops whole-trip cancellations, so only skipped stops show as cancelled.
+- Live departures: trips from `frequencies.txt` are not expanded.
+- Live departures: Warsaw has no realtime data, so its board shows the timetable only.
+- Live departures: the central stop takes 0.6 to 0.8 s to respond.
 - Journey planning: there is no address search. Points are stops, map picks or my location (#13).
 - Journey planning: no rate limit yet. It is needed before public deployment.
 - Journey planning: the results show times without a date when the trip is on another day. The wheelchair
