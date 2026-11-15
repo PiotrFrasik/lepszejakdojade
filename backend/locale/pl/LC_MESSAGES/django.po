@@ -138,6 +138,10 @@ msgstr "Wystąpił błąd serwera."
 msgid "Date is out of range."
 msgstr "Data jest poza obsługiwanym zakresem."
 
+#: timetable/serializers.py:58 timetable/serializers.py:59
+msgid "Enter at least 2 characters."
+msgstr "Wpisz co najmniej 2 znaki."
+
 #: timetable/views.py:77
 msgid "Line not found."
 msgstr "Nie znaleziono linii."
