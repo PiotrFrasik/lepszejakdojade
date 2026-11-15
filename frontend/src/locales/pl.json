@@ -62,8 +62,38 @@
     "degraded": "Serwer działa z problemami",
     "unavailable": "Serwer niedostępny"
   },
-  "placeholder": {
-    "comingSoon": "Ta sekcja jest w przygotowaniu."
+  "tickets": {
+    "title": "Bilety",
+    "intro": "Cennik biletów komunikacji miejskiej w mieście {city}.",
+    "notice": "Ceny mają charakter informacyjny. Przed podróżą sprawdź oficjalny cennik. Zakup biletów w aplikacji nie jest jeszcze dostępny.",
+    "loading": "Wczytywanie biletów…",
+    "cityNotFound": "Nie znaleziono cennika dla tego miasta.",
+    "empty": "Dla tego miasta nie ma teraz dostępnych biletów.",
+    "emptyStandard": "Brak biletów normalnych w cenniku.",
+    "emptyReduced": "Brak biletów ulgowych w cenniku.",
+    "fareLabel": "Rodzaj biletu",
+    "fare": {
+      "standard": "Normalny",
+      "reduced": "Ulgowy"
+    },
+    "pricesAsOf": "Ceny z dnia {date}",
+    "source": "Oficjalny cennik ({host})",
+    "newTab": "(otwiera się w nowej karcie)",
+    "zonesTitle": "Strefy biletowe",
+    "zonesHint": "Bilet jest ważny w podróży tylko wtedy, gdy obejmuje wszystkie strefy, przez które jedziesz.",
+    "zonesOfTicket": "Strefy: {zones}",
+    "kinds": {
+      "single": "Bilety jednorazowe",
+      "time": "Bilety czasowe",
+      "daily": "Bilety krótkookresowe",
+      "period": "Bilety okresowe",
+      "other": "Inne bilety"
+    },
+    "validity": {
+      "single": "Jeden przejazd, bez przesiadek",
+      "duration": "Ważny {duration}",
+      "days": "Ważny {days} dzień | Ważny {days} dni | Ważny {days} dni"
+    }
   },
   "dataSources": {
     "title": "Źródła danych",
@@ -338,6 +368,11 @@
       "bike": "Rowerem",
       "value": "{duration} · {distance}",
       "unavailable": "niedostępne"
+    },
+    "ticket": {
+      "title": "Bilet na połączenie {index}",
+      "reducedFare": "Taryfa ulgowa",
+      "allTickets": "Wszystkie bilety"
     }
   },
   "assistant": {

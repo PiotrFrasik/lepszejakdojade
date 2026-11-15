@@ -62,8 +62,38 @@
     "degraded": "Server is up with problems",
     "unavailable": "Server unavailable"
   },
-  "placeholder": {
-    "comingSoon": "This section is coming soon."
+  "tickets": {
+    "title": "Tickets",
+    "intro": "Public transport ticket prices in {city}.",
+    "notice": "Prices are for information only. Check the official price list before you travel. Buying tickets in the app is not available yet.",
+    "loading": "Loading tickets…",
+    "cityNotFound": "No price list was found for this city.",
+    "empty": "No tickets are available for this city right now.",
+    "emptyStandard": "The price list has no standard tickets.",
+    "emptyReduced": "The price list has no reduced-fare tickets.",
+    "fareLabel": "Fare",
+    "fare": {
+      "standard": "Standard",
+      "reduced": "Reduced"
+    },
+    "pricesAsOf": "Prices as of {date}",
+    "source": "Official price list ({host})",
+    "newTab": "(opens in a new tab)",
+    "zonesTitle": "Ticket zones",
+    "zonesHint": "A ticket is valid for a journey only if it covers every zone you travel through.",
+    "zonesOfTicket": "Zones: {zones}",
+    "kinds": {
+      "single": "Single-ride tickets",
+      "time": "Time tickets",
+      "daily": "Short-term tickets",
+      "period": "Period passes",
+      "other": "Other tickets"
+    },
+    "validity": {
+      "single": "One ride, no transfers",
+      "duration": "Valid for {duration}",
+      "days": "Valid for {days} days | Valid for {days} day | Valid for {days} days"
+    }
   },
   "dataSources": {
     "title": "Data sources",
@@ -338,6 +368,11 @@
       "bike": "By bike",
       "value": "{duration} · {distance}",
       "unavailable": "not available"
+    },
+    "ticket": {
+      "title": "Ticket for connection {index}",
+      "reducedFare": "Reduced fare",
+      "allTickets": "All tickets"
     }
   },
   "assistant": {
