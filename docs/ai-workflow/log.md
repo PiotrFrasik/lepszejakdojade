@@ -20,6 +20,34 @@ the reviewer's verdicts and the maintainer's manual-test feedback.
 **Problems and lessons:** what went wrong with the agents and how the process or prompts were adjusted.
 -->
 
+## Stop view — 2026-11-15
+**Issues / PRs:** #9, #56 (PRs: pending); #77 split off (new, not started)
+**Branches:** feat/9-stop-overview (backend), feat/56-stop-view (frontend)
+
+| Agent | What it did | Result |
+|---|---|---|
+| coordinator | Chose to finish the stop view before tickets and accounts, to complete the timetable. Narrowed #9 to the overview endpoint and moved nearby search and colloquial aliases to #77. Wrote the contract in `docs/api.md` first (uncommitted) and pasted it into the agent prompts, because worktrees branch from `main`. Clarified the contract twice after implementation: "departing" and empty headsigns. | Done. |
+| backend (#9) | `GET /api/v1/cities/{city}/stops/{stop_id}/` in `timetable/overview.py`: one aggregate query, directions cached 24 h per route. `group_vehicle_types()` extracted and shared with stop search. Checked on Kraków data (14 platforms at Rondo Mogilskie, 24 lines). Warsaw not checked. | Done. |
+| frontend (#56) | "Lines at this stop" below the departures board at `/timetable/stops/:stopId`, with direction links to the stop timetable. Both requests run in parallel and fail separately. New `StopLines.vue` and `useStopOverview.ts`. Dev mock reuses `VITE_DEPARTURES_MOCK`. | Done. |
+| tester (#56) | Frontend: 514 tests passing. Fixed 2 old board tests broken by the second request. Added API, `StopLines` and view tests. | Passing. |
+| tester (#9) | Backend: 50 new tests, full suite 1522 passing. | Passing. No production bugs found. |
+| reviewer (#9) | Rounds: 1. | APPROVED, no blocking findings. |
+| reviewer (#56) | Rounds: 1. | APPROVED, no blocking findings. |
+
+**Review findings that mattered:** None blocking. Should-fix items were logged as follow-ups:
+- Frontend: a test for navigating between stops (stale data and aborted requests), and the page `h1` in the both-404 state.
+- Backend: a test that city-config changes show while directions are cached, a test for an unknown suffix 404 on the greedy route, and vehicle types could come from cached data.
+
+**Manual test (maintainer):** Waived by Piotr for this feature.
+
+**Problems and lessons:**
+- The 5-hour usage limit interrupted the backend agent and the frontend tester mid-run. Both resumed after the reset without losing work.
+- Rules such as "departing" and empty headsigns were clarified after implementation. Put such rules in the contract before the agents start.
+
+**Follow-ups:**
+- Nearby search (`?lat=&lon=&radius=`) and colloquial stop aliases (#77).
+- The backend and frontend test follow-ups above.
+
 ## Live departures board — 2026-11-15
 **Issues / PRs:** #73, #74 (PRs: pending)
 **Branches:** feat/73-stop-departures (backend), feat/74-departures-board (frontend)
