@@ -415,3 +415,98 @@ have a clause on use "in its originally obtained form".
 - Before any public release, revisit point 1 and check the attribution text.
 - The licence strings in the city configs are English sentences. #25 needs translated text or short
   codes to show them in the app.
+
+## 20. Timetable ids are `{feed_id}:{gtfs_id}`
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** A city has several feeds, and GTFS ids are only unique within one feed. Clients also keep
+ids in URLs.
+
+**Decision.** `line_id`, `stop_id` and `trip_id` are `{feed_id}:{gtfs_id}`. Clients treat them as opaque
+strings and URL-encode them.
+
+**Alternatives.** Plain GTFS ids: may collide across feeds of the same city.
+
+**Consequences.** Ids stay the same across re-imports of the same feed. Ids are unique within a city.
+
+## 21. Holidays count as Sunday, found from the active services
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** The timetable needs a day type for holidays. Holidays are not in the feed as a day type.
+
+**Decision.** A weekday or Saturday whose set of active services equals the set of the nearest Sunday is
+treated as `sunday`. No holiday list is hard-coded, so it works for any city.
+
+**Consequences.** It depends on the feed's calendar. Warsaw's rule is not yet checked on a weekday holiday
+inside the feed window (see the follow-ups in the log).
+
+## 22. GTFS `route_color` FFFFFF and 000000 count as unset
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** The Kraków bus feed uses white and black as placeholder colours.
+
+**Decision.** A `route_color` of `FFFFFF` or `000000` is ignored. The group colour is used instead.
+
+**Consequences.** A line that really is white or black in GTFS gets the group colour.
+
+## 23. The last stop of a trip is not in stop timetables
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** A departure from the last stop of a trip is not a passenger departure.
+
+**Decision.** Stop times at the last stop of a trip are left out of stop timetables. At a terminus the
+response is `200` with empty columns.
+
+**Consequences.** The trip view still shows the last stop.
+
+## 24. Frequency trips are expanded per headway; the trip view shows the template
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** Some feeds (for example Warsaw metro) describe runs with `frequencies.txt` instead of one trip
+per run.
+
+**Decision.** Stop timetables expand each frequency into one departure per headway. The trip id is the
+template trip, so the trip view shows the template's times.
+
+**Consequences.** A trip view for a frequency-based run does not show that run's own times. Trip identity
+for these runs is a follow-up.
+
+## 25. Stop-to-routes transfer lookup is cached for 24 h, keyed by stop row id
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** The transfers of a line diagram need a lookup from stop to routes. It is the same for all
+users until the next import.
+
+**Decision.** Cache it in the Django cache for 24 h, keyed by stop row id. Each import creates new rows and
+so new ids, so an old entry is never read after an import.
+
+**Consequences.** After an import, the first request for a stop rebuilds its entry. A precomputed table is a
+follow-up (data agent).
+
+## 26. MapLibre worker URL is set explicitly
+
+**Status:** accepted (2026-11-15, #11)
+
+**Context.** Under Vite, dependency pre-bundling dropped MapLibre's worker file. The GeoJSON layers did not
+render in the browser. Unit tests mock MapLibre, so they did not catch it.
+
+**Decision.** Import the worker file with `?url` and pass it to `setWorkerUrl`, in `frontend/src/config/mapWorker.ts`.
+
+**Consequences.** The map needs a browser smoke test before a manual test. Unit tests cannot show this.
+
+## 27. Default direction is the lowest direction the line has
+
+**Status:** accepted (2026-11-15, #10)
+
+**Context.** Some lines have only direction `1`, and the direction parameter is optional.
+
+**Decision.** When `direction` is omitted, the line route and stop timetable use the lowest direction that
+exists for the line. `0` is used when it exists.
+
+**Consequences.** A line with only direction `1` opens on `1`. Trips without `direction_id` count as `0`.

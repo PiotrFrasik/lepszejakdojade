@@ -1,7 +1,8 @@
 # City configuration: Kraków.
 # Schema and validation: backend/cities/registry.py. The file name must equal `id`.
 # Exposed by the API: id, names, timezone, map, vehicle_types, line_groups, realtime.
-# Internal only (never returned by the API): feeds, ticket_zones, attributions, otp.
+# Internal only (never returned by the API): line_group_rules, feeds, ticket_zones, attributions,
+# otp.
 # Feed URLs and licences were checked against the publishers on the date in each comment.
 # A null URL is deliberate; the comment next to it gives the reason.
 
@@ -34,6 +35,37 @@ line_groups:
   - id: replacement
     names: { pl: Linie zastępcze i okresowe, en: Replacement and temporary lines }
     colour: "#d4a72c"
+
+# Internal: which line goes to which group. Rules are checked in order and the first match
+# wins; a line that matches no rule goes to the first group (day). Each rule may give
+# `vehicle_types`, `feeds` (gtfs_static ids) and `short_name` (a regular expression that must
+# match the whole GTFS route_short_name); omitted criteria match anything.
+# Numbering as published by ZTP Kraków: trams 1-59 day, 6x night, 7x temporary/replacement;
+# buses 1xx/3xx/5xx city day (normal, fast, express), 2xx/4xx agglomeration (normal, fast),
+# 6xx city night, 7xx replacement, 9xx agglomeration night.
+line_group_rules:
+  - group: replacement
+    short_name: "Z.*"
+  - group: replacement
+    vehicle_types: [bus]
+    short_name: "7\\d\\d"
+  - group: replacement
+    vehicle_types: [tram]
+    short_name: "7\\d"
+  - group: night
+    vehicle_types: [tram]
+    short_name: "6\\d"
+  - group: night
+    vehicle_types: [bus]
+    short_name: "6\\d\\d|9\\d\\d"
+  - group: agglomeration
+    feeds: [ztp_mobilis_bus]
+  - group: agglomeration
+    vehicle_types: [bus]
+    short_name: "2\\d\\d|4\\d\\d"
+  # Agglomeration trains (SKA and regional rail inside the city area).
+  - group: agglomeration
+    vehicle_types: [rail]
 
 realtime:
   departures: true

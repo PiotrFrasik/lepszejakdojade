@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 09:40+0100\n"
+"POT-Creation-Date: 2026-11-14 20:02+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,15 +17,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: cities/views.py:61
+#: cities/views.py:61 timetable/views.py:66
 msgid "City not found."
 msgstr ""
 
-#: config/settings/base.py:112
+#: config/settings/base.py:132
 msgid "Polish"
 msgstr ""
 
-#: config/settings/base.py:113
+#: config/settings/base.py:133
 msgid "English"
 msgstr ""
 
@@ -125,4 +125,32 @@ msgstr ""
 
 #: core/views.py:112
 msgid "A server error occurred."
+msgstr ""
+
+#: timetable/serializers.py:32
+msgid "Date is out of range."
+msgstr ""
+
+#: timetable/views.py:77
+msgid "Line not found."
+msgstr ""
+
+#: timetable/views.py:85
+msgid "This line does not run in this direction."
+msgstr ""
+
+#: timetable/views.py:157
+msgid "Stop not found."
+msgstr ""
+
+#: timetable/views.py:160
+msgid "This line does not stop here in this direction."
+msgstr ""
+
+#: timetable/views.py:186
+msgid "Trip not found."
+msgstr ""
+
+#: timetable/views.py:189
+msgid "This trip does not run on this date."
 msgstr ""

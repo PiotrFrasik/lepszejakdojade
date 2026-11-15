@@ -53,6 +53,8 @@ Entries are written from Conventional Commit messages.
   import report counts them as corrections. Orphans are still skipped (#43).
 - Attributions for PKP PLK, Mikołaj Kuranowski (Polish Trains GTFS) and Koleje Mazowieckie in both
   city configs (#43).
+- Timetable browser and read-only API (#10, #11): `timetable` app with the lines, line route, stop
+  timetable and trip endpoints, and frontend views under `/timetable` (pl and en).
 
 ### Changed
 

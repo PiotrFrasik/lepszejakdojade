@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "core",
     "cities",
     "transit_data",
+    "timetable",
 ]
 
 MIDDLEWARE = [
@@ -198,6 +199,9 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+",
     "ENUM_NAME_OVERRIDES": {
         "HealthStatusEnum": "core.serializers.HEALTH_STATUS_CHOICES",
+        "VehicleTypeEnum": "cities.registry.VEHICLE_TYPES",
+        "VariantKindEnum": "timetable.serializers.VARIANT_KINDS",
+        "LineNoticeKindEnum": "timetable.serializers.LINE_NOTICE_KINDS",
     },
 }
 

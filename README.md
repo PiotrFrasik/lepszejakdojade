@@ -3,11 +3,19 @@
 Public transport web app for Kraków and Warsaw. It is in early development: the foundation
 (containers, API skeleton, frontend shell with a city picker, map and language switch) is in place.
 A realtime collector for Kraków trip updates has started and stores data in the database.
-Static GTFS timetables for Kraków and Warsaw are imported every night. Journey planning, the
-timetable screens, tickets, live departures and the AI assistant are planned.
+Static GTFS timetables for Kraków and Warsaw are imported every night, and the timetable browser
+shows them. Journey planning, the stop view, tickets, live departures and the AI assistant are planned.
 
 Full product description: [docs/concept.md](docs/concept.md).
 The app is bilingual (Polish / English) with a language switcher.
+
+## Features
+
+- **Timetable browser** (built, #10, #11): lines grouped by type, line diagram with a route map, stop
+  timetables for weekdays, Saturdays and Sundays/holidays, and a trip view. Routes are in
+  [Timetable browser](#timetable-browser).
+- **Planned:** journey planning (#12), live departures and vehicles (#20, #21), delay statistics and
+  predictions (#22, #23), tickets (demo), AI assistant (#18, #19).
 
 Screenshots and GIFs will be added when the first user-facing features are merged.
 
@@ -101,6 +109,9 @@ City configuration lives in `backend/cities/config/<id>.yaml`, one file per city
   attributions) are not exposed.
 - A `gtfs_static` feed can have an optional `filter` (`bbox`, `exclude_agencies`). The import cuts
   the feed to the city's area. See [docs/architecture.md](docs/architecture.md).
+- `line_group_rules` (internal, not returned by the API) sets the line groups of the timetable browser.
+  Each rule has `vehicle_types`, `feeds` and a `short_name` regex that maps to a group. The first
+  matching rule wins; a line with no match goes to the first group.
 
 ## Realtime data collector
 
@@ -167,6 +178,18 @@ city at `GTFS_IMPORT_HOUR`:`GTFS_IMPORT_MINUTE` (default 03:30, Europe/Warsaw; b
 Retention, sizes and the import rules are in [docs/architecture.md](docs/architecture.md). Licences
 and attribution of each source are in [docs/decisions.md](docs/decisions.md), entries 13 and 19.
 
+## Timetable browser
+
+Built on the active static GTFS versions (see [Static timetables](#static-timetables-gtfs)). No login.
+
+- Pages: `/timetable` (lines), `/timetable/lines/:lineId` (line diagram and route map),
+  `/timetable/lines/:lineId/stops/:stopId` (stop timetable). The city is not in the URL; it comes from
+  the city picker.
+- API (read-only): `GET /api/v1/cities/{city}/lines/`, `.../lines/{line_id}/route/`,
+  `.../lines/{line_id}/stops/{stop_id}/timetable/`, `GET /api/v1/cities/{city}/trips/{trip_id}/`.
+  Contract: [docs/api.md](docs/api.md#timetable-10).
+- Backend app: `backend/timetable/`. Frontend: `frontend/src/views/timetable/`.
+
 ## Tests
 
 ```bash
@@ -214,6 +237,8 @@ not secrets.
   keeps the last good version; the official ZTM feed is the fallback (see `docs/decisions.md`, entry 12).
   The national rail feed comes from the same source and has the same risk.
 - National rail has static timetables only. There is no realtime data for it yet.
+- Timetable browser: frequency-based trips show the template trip's times in the trip view. The stop
+  entry (a stop page without a line) and the departures board are planned (#9, #56).
 - OTP graphs are rebuilt by hand. A graph built before the rail feed was added has no national rail
   until it is rebuilt. Graphs have no bicycle transfers (`docs/decisions.md`, entry 16) and no
   realtime updates.
@@ -222,7 +247,7 @@ not secrets.
 ## Repository layout
 
 ```
-backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/)
+backend/     Django API, Celery worker and beat (config/, core/, cities/, transit_data/, timetable/)
 frontend/    Vue 3 + TypeScript + Vite app
 otp/         OpenTripPlanner config and graph data
 docs/        concept, API contract, architecture, decisions, AI workflow log

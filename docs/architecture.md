@@ -49,7 +49,7 @@ flowchart LR
 | Service | Where | Notes |
 |---|---|---|
 | Frontend | `frontend/` | Vue 3, TypeScript, Vite, Pinia, vue-i18n, MapLibre |
-| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data` |
+| Backend | `backend/` | Django 5, DRF, drf-spectacular. Apps: `core`, `cities`, `transit_data`, `timetable` |
 | celery-worker, celery-beat | `backend/` image | Same image as the backend; runs background tasks |
 | Redis | `redis:7-alpine` | Celery broker |
 | PostgreSQL | `postgis/postgis:16-3.4` | Main database |
@@ -305,10 +305,45 @@ Frontend sends `A → B` with time and preferences to the backend. The backend c
 instance of the city and returns journeys. The app has no routing code of its own; the engine is
 OpenTripPlanner 2 ([concept](concept.md), section 1).
 
-### Timetable (planned, #9, #10)
+### Timetable browser (implemented, #10, #11)
 
-The static import (#7, see above) already fills the PostgreSQL tables. The backend will serve stops,
-lines and stop timetables from these tables. The frontend will render the browser and the print view.
+The `timetable` Django app is read-only. It reads the tables filled by the static import (#7) and
+only the **active** `FeedVersion` of each feed. It has no Celery tasks and writes nothing. The frontend
+timetable views call its four endpoints ([api.md](api.md#timetable-10)).
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant F as Frontend (timetable views)
+    participant B as Backend (timetable app)
+    participant P as PostgreSQL (GTFS tables)
+
+    U->>F: open /timetable, a line or a stop
+    F->>B: GET /api/v1/cities/{city}/lines/... (date, direction)
+    B->>P: active versions only: routes, trips, stop times, calendar
+    P-->>B: rows (no N+1 queries)
+    B-->>F: JSON
+    F-->>U: line grid, diagram, route map, stop timetable
+```
+
+Rules the app follows:
+
+- **Ids** are `{feed_id}:{gtfs_id}`, stable across re-imports of the same feed.
+- **Line groups** come from the internal `line_group_rules` in each city config (vehicle type, feed,
+  short-name regex). First match wins; no match goes to the first group.
+- **Day types** are `weekday`, `saturday` and `sunday`. A holiday counts as `sunday` when its set of
+  active services equals the nearest Sunday's set. No holiday list is hard-coded.
+- **Transfers** (other lines at the same stop or a stop with the same name within 300 m) are cached for
+  24 h in the Django cache, keyed by stop row id. A new import creates new ids, so old entries are not reused.
+- **Frequency trips** (`frequencies.txt`) are expanded into one departure per headway. The trip view
+  shows the template trip's times.
+- **Measured** on real Kraków and Warsaw data: 20–110 ms per request, no N+1 queries.
+
+Frontend routes: `/timetable`, `/timetable/lines/:lineId`, `/timetable/lines/:lineId/stops/:stopId`.
+The city is not in the URL. Maps use MapLibre with its worker set explicitly (see
+[decisions](decisions.md#26-maplibre-worker-url-set-explicitly)).
+
+Planned: the stop entry (a stop page without a line) and the departures board (#9, #56).
 
 ### Live departures and vehicles (planned, #20, #21)
 

@@ -7,6 +7,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 api_v1_patterns = [
     path("", include("core.urls")),
     path("", include("cities.urls")),
+    path("", include("timetable.urls")),
 ]
 
 urlpatterns = [
