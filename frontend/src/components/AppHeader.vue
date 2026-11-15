@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import CitySwitcher from '@/components/CitySwitcher.vue'
 import LanguageToggle from '@/components/LanguageToggle.vue'
@@ -8,12 +8,22 @@ import LanguageToggle from '@/components/LanguageToggle.vue'
 const { t } = useI18n()
 
 const navItems = [
-  { to: { name: 'home' }, labelKey: 'nav.home' },
-  { to: { name: 'journey' }, labelKey: 'nav.journey' },
-  { to: { name: 'timetable' }, labelKey: 'nav.timetable' },
-  { to: { name: 'tickets' }, labelKey: 'nav.tickets' },
-  { to: { name: 'assistant' }, labelKey: 'nav.assistant' },
+  { to: { name: 'home' }, labelKey: 'nav.home', section: false },
+  { to: { name: 'journey' }, labelKey: 'nav.journey', section: true },
+  { to: { name: 'timetable' }, labelKey: 'nav.timetable', section: true },
+  { to: { name: 'tickets' }, labelKey: 'nav.tickets', section: true },
+  { to: { name: 'assistant' }, labelKey: 'nav.assistant', section: true },
 ] as const
+
+const route = useRoute()
+const router = useRouter()
+
+/** Section links (e.g. Timetables) stay highlighted on their sub-pages. */
+function isSectionActive(item: (typeof navItems)[number]): boolean {
+  if (!item.section) return false
+  const base = router.resolve(item.to).path
+  return route.path.startsWith(`${base}/`)
+}
 </script>
 
 <template>
@@ -31,7 +41,12 @@ const navItems = [
     <nav class="app-header__nav" :aria-label="t('nav.label')">
       <ul>
         <li v-for="item in navItems" :key="item.labelKey">
-          <RouterLink :to="item.to" class="app-header__link">{{ t(item.labelKey) }}</RouterLink>
+          <RouterLink
+            :to="item.to"
+            class="app-header__link"
+            :class="{ 'app-header__link--active': isSectionActive(item) }"
+            >{{ t(item.labelKey) }}</RouterLink
+          >
         </li>
       </ul>
     </nav>
@@ -109,7 +124,8 @@ const navItems = [
   background: rgb(255 255 255 / 12%);
 }
 
-.app-header__link.router-link-exact-active {
+.app-header__link.router-link-exact-active,
+.app-header__link--active {
   background: var(--color-on-primary);
   color: var(--color-primary);
   font-weight: 600;
