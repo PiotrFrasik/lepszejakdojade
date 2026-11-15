@@ -44,13 +44,13 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/timetable/StopTimetableView.vue'),
     meta: { titleKey: 'timetable.stopTimetable' },
   },
-  // Departures board of a stop group (#74), live times where available. `stopId` is any
-  // platform id of the group (opaque, URL-encoded).
+  // Stop page: departures board of a stop group (#74), live times where available, and the
+  // lines serving the stop (#56). `stopId` is any platform id of the group (opaque, URL-encoded).
   {
     path: '/timetable/stops/:stopId',
     name: 'timetable-stop-departures',
     component: () => import('@/views/timetable/StopDeparturesView.vue'),
-    meta: { titleKey: 'timetable.departures.title' },
+    meta: { titleKey: 'timetable.stopPage' },
   },
   {
     path: '/tickets',
